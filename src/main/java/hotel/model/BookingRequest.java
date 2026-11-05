@@ -1,91 +1,88 @@
 package hotel.model;
+
+import hotel.model.enums.RequestStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import hotel.model.enums.*;
 
 public class BookingRequest {
-    private String requestId;            // Mã yêu cầu (ví dụ: REQ001)
-    private String bookingId;            // Mã đơn đặt phòng cần thay đổi (dùng mã để liên kết)
-    private RequestType requestType;     // Loại yêu cầu: CANCEL, CHANGE_DATE, CHANGE_ROOM, EXTEND
-    private String reason;               // Lý do thay đổi của khách/nhân viên
+    private String requestId;
+    private String customerId;
+    private String bookingType;             // "INDIVIDUAL" hoặc "GROUP"
+    private String groupName;
+    private LocalDate expectedCheckInDate;
+    private LocalDate expectedCheckOutDate;
+    private LocalDateTime depositDueAt;
+    private String cancelReason;
+    private RequestStatus requestStatus;
+    private String createdBy;
+    private LocalDateTime createdAt;
     
-    // Các thuộc tính phục vụ cho từng loại yêu cầu cụ thể
-    private LocalDate newCheckInDate;    // Ngày nhận phòng mới (nếu đổi ngày/gia hạn)
-    private LocalDate newCheckOutDate;   // Ngày trả phòng mới (nếu đổi ngày/gia hạn)
-    private String newRoomId;            // Mã phòng mới (nếu yêu cầu đổi phòng)
+    private BookingDetail[] details;
+    private int detailCount;
 
-    private RequestStatus requestStatus; // Trạng thái: PENDING, APPROVED, REJECTED
-    private String requestedBy;          // Mã nhân viên hoặc khách hàng tạo yêu cầu
-    private String approvedBy;           // Mã Quản lý (Manager/Admin) duyệt hoặc từ chối
-    private LocalDateTime createdAt;     // Thời điểm tạo yêu cầu
-
-    /**
-     * Constructor khởi tạo một Yêu cầu mới
-     */
-    public BookingRequest(String requestId, String bookingId, RequestType requestType, 
-                          String reason, String requestedBy) {
+    public BookingRequest(String requestId, String customerId, String bookingType, String groupName, 
+                          LocalDate expectedCheckIn, LocalDate expectedCheckOut, 
+                          String createdBy, int maxDetails) {
         this.requestId = requestId;
-        this.bookingId = bookingId;
-        this.requestType = requestType;
-        this.reason = reason;
-        this.requestedBy = requestedBy;
-        
-        // Mặc định khi vừa gửi lên là PENDING (chờ duyệt)
-        this.requestStatus = RequestStatus.PENDING;
-        this.createdAt = LocalDateTime.now(); // Tự động lấy thời gian hệ thống
+        this.customerId = customerId;
+        this.bookingType = bookingType;
+        this.groupName = groupName;
+        this.expectedCheckInDate = expectedCheckIn;
+        this.expectedCheckOutDate = expectedCheckOut;
+        this.createdBy = createdBy;
+        this.createdAt = LocalDateTime.now();
+        this.depositDueAt = this.createdAt.plusHours(24);
+        this.requestStatus = RequestStatus.PENDING_DEPOSIT;
+        this.details = new BookingDetail[maxDetails];
+        this.detailCount = 0;
     }
 
-    /**
-     * Phương thức cho Quản lý (Manager/Admin) CHẤP NHẬN yêu cầu
-     * @param managerId Mã người duyệt
-     */
-    public void approve(String managerId) {
-        this.approvedBy = managerId;
-        this.requestStatus = RequestStatus.APPROVED;
+    public void addDetail(BookingDetail detail) {
+        if (detailCount < details.length) {
+            details[detailCount++] = detail;
+        }
     }
 
-    /**
-     * Phương thức cho Quản lý (Manager/Admin) TỪ CHỐI yêu cầu
-     * @param managerId Mã người từ chối
-     */
-    public void reject(String managerId) {
-        this.approvedBy = managerId;
-        this.requestStatus = RequestStatus.REJECTED;
+    public double calculateRequiredDeposit() {
+        double total = 0;
+        for (int i = 0; i < detailCount; i++) {
+            if (details[i] != null) {
+                total += details[i].calculateRoomAmount();
+            }
+        }
+        return total * 0.3; // Yêu cầu cọc 30%
     }
 
-    /**
-     * Kiểm tra xem yêu cầu có đang trong trạng thái chờ duyệt không
-     */
-    public boolean isPending() {
-        return this.requestStatus == RequestStatus.PENDING;
+    public void confirmDeposit() {
+        this.requestStatus = RequestStatus.CONFIRMED;
     }
 
-    // --- GETTER & SETTER ---
+    public void cancel(String reason) {
+        this.cancelReason = reason;
+        this.requestStatus = RequestStatus.CANCELLED;
+    }
+
+    public void expire() {
+        this.requestStatus = RequestStatus.EXPIRED;
+    }
+
+    public boolean isActive() {
+        return this.requestStatus == RequestStatus.PENDING_DEPOSIT || 
+               this.requestStatus == RequestStatus.CONFIRMED;
+    }
+
+    // --- BỔ SUNG CÁC GETTER BỊ THIẾU ĐỂ HẾT LỖI TRONG BOOKINGMANAGER ---
     public String getRequestId() { return requestId; }
-    public String getBookingId() { return bookingId; }
-    public RequestType getRequestType() { return requestType; }
-    public String getReason() { return reason; }
+    public String getCustomerId() { return customerId; }
+    public String getBookingType() { return bookingType; }               // Sửa lỗi getBookingType()
+    public String getGroupName() { return groupName; }                   // Sửa lỗi getGroupName()
+    public LocalDate getExpectedCheckInDate() { return expectedCheckInDate; } // Sửa lỗi getExpectedCheckInDate()
+    public LocalDate getExpectedCheckOutDate() { return expectedCheckOutDate; } // Sửa lỗi getExpectedCheckOutDate()
     public RequestStatus getRequestStatus() { return requestStatus; }
-    public String getRequestedBy() { return requestedBy; }
-    public String getApprovedBy() { return approvedBy; }
+    public BookingDetail[] getDetails() { return details; }
+    public int getDetailCount() { return detailCount; }
+    public String getCreatedBy() { return createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-
-    public LocalDate getNewCheckInDate() { return newCheckInDate; }
-    public LocalDate getNewCheckOutDate() { return newCheckOutDate; }
-    public String getNewRoomId() { return newRoomId; }
-
-    /**
-     * Cập nhật khoảng ngày mới nếu yêu cầu liên quan đến CHANGE_DATE hoặc EXTEND
-     */
-    public void setNewDates(LocalDate checkIn, LocalDate checkOut) {
-        this.newCheckInDate = checkIn;
-        this.newCheckOutDate = checkOut;
-    }
-
-    /**
-     * Cập nhật mã phòng mới nếu yêu cầu là CHANGE_ROOM
-     */
-    public void setNewRoomId(String newRoomId) {
-        this.newRoomId = newRoomId;
-    }
+    public LocalDateTime getDepositDueAt() { return depositDueAt; }
+    public String getCancelReason() { return cancelReason; }
 }

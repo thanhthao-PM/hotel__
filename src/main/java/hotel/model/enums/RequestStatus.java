@@ -1,7 +1,10 @@
 package hotel.model.enums;
 
 public enum RequestStatus {
-    PENDING,   // Yêu cầu đang chờ duyệt
-    APPROVED,  // Quản lý đã chấp nhận yêu cầu
-    REJECTED   // Quản lý từ chối yêu cầu
+    PENDING_DEPOSIT, // Đã tạo yêu cầu, chờ khách chuyển cọc
+    CONFIRMED,       // Đã nhận cọc thành công, giữ chỗ
+    CONVERTED,       // Khách đã đến và chuyển thành Booking thành công
+    CANCELLED,       // Khách hoặc nhân viên hủy
+    EXPIRED,         // Quá hạn cọc mà khách chưa chuyển tiền
+    NO_SHOW          // Đến ngày mà khách không tới nhận phòng
 }

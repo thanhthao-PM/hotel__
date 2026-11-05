@@ -1,105 +1,227 @@
 package hotel.service;
 
 import hotel.model.Booking;
+import hotel.model.BookingDetail;
 import hotel.model.BookingList;
 import hotel.model.BookingRequest;
 import hotel.model.BookingRequestList;
+import hotel.model.Deposit;
 import hotel.model.IndividualBooking;
 import hotel.model.GroupBooking;
 import hotel.model.enums.BookingStatus;
-import hotel.model.enums.RequestType;
+// import hotel.model.enums.DepositStatus;
+import hotel.model.enums.PaymentMethod;
+import hotel.model.enums.RequestStatus;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Lớp Quản lý các đơn Đặt phòng và Yêu cầu thay đổi đặt phòng (Module P3).
- * Sử dụng BookingList và BookingRequestList làm thành phần lưu trữ và thao tác dữ liệu.
+ * Lớp Quản lý các đơn Đặt phòng, Yêu cầu đặt phòng và Tiền cọc (Module P3).
+ * Cập nhật theo luồng nghiệp vụ mới nhất: BookingRequest -> Deposit -> Booking.
  */
 public class BookingManager {
-    // Sử dụng 2 class BookingList và BookingRequestList chuyên biệt để quản lý danh sách
     private final BookingList bookingList;
     private final BookingRequestList requestList;
 
     // Bộ đếm sinh mã tự động (Static counter)
     private static int nextBookingId = 1;
     private static int nextRequestId = 1;
+    private static int nextDetailId = 1;
+    private static int nextDepositId = 1;
 
-    /**
-     * Constructor khởi tạo với kích thước mặc định cho BookingList
-     */
     public BookingManager() {
         this.bookingList = new BookingList();
         this.requestList = new BookingRequestList();
     }
 
-    /**
-     * Constructor cho phép tùy chỉnh sức chứa ban đầu của BookingList
-     */
     public BookingManager(int initialCapacity) {
         this.bookingList = new BookingList(initialCapacity);
         this.requestList = new BookingRequestList();
     }
 
     // =========================================================================
-    // 1. THUẬT TOÁN KIỂM TRA CHỐNG ĐẶT TRÙNG PHÒNG (OVERLAP CHECK)
+    // 1. THUẬT TOÁN CHỐNG ĐẶT TRÙNG PHÒNG (TÍNH CẢ BOOKING VÀ REQUEST GIỮ CHỖ)
     // =========================================================================
 
     /**
-     * Kiểm tra xem một phòng cụ thể có trống trong khoảng thời gian [checkIn, checkOut] hay không.
-     * Thuật toán Overlap: Hai khoảng [A, B] và [C, D] giao nhau khi (A < D) và (B > C).
+     * Kiểm tra phòng trống trong khoảng [checkIn, checkOut].
+     * Phải kiểm tra trùng lịch trên cả BookingRequest đang giữ chỗ và Booking chính thức.
      */
     public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {
         if (roomId == null || checkIn == null || checkOut == null) return false;
-        if (!checkOut.isAfter(checkIn)) return false; // Ngày trả phải sau ngày nhận
+        if (!checkOut.isAfter(checkIn)) return false;
 
-        // Sử dụng phương thức getAll() của BookingList để lấy toàn bộ danh sách phòng hiện có
+        // 1. Kiểm tra trên danh sách BookingRequest đang giữ chỗ (PENDING_DEPOSIT hoặc CONFIRMED)
+        List<BookingRequest> allRequests = requestList.getAll();
+        for (BookingRequest req : allRequests) {
+            if (req.isActive()) {
+                BookingDetail[] details = req.getDetails();
+                for (int i = 0; i < req.getDetailCount(); i++) {
+                    BookingDetail d = details[i];
+                    if (d != null && roomId.equals(d.getOriginalRoomId())) {
+                        if (checkIn.isBefore(d.getCheckOutDate()) && checkOut.isAfter(d.getCheckInDate())) {
+                            return false; // Đã bị giữ chỗ bởi một Request!
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Kiểm tra trên danh sách Booking chính thức
         Booking[] allBookings = bookingList.getAll();
-
         for (Booking b : allBookings) {
-            // Bỏ qua các đơn đặt đã bị HỦY hoặc đã HOÀN THÀNH
             if (b.getStatus() == BookingStatus.CANCELLED || b.getStatus() == BookingStatus.COMPLETED) {
                 continue;
             }
 
-            // Kiểm tra xem đơn đặt b có chứa roomId cần tìm hay không
-            boolean hasRoom = false;
+            boolean containsRoom = false;
             if (b instanceof IndividualBooking) {
-                IndividualBooking ib = (IndividualBooking) b;
-                if (roomId.equals(ib.getRoomId())) {
-                    hasRoom = true;
-                }
+                containsRoom = roomId.equals(((IndividualBooking) b).getRoomId());
             } else if (b instanceof GroupBooking) {
-                GroupBooking gb = (GroupBooking) b;
-                String[] roomIds = gb.getRoomIds();
+                String[] roomIds = ((GroupBooking) b).getRoomIds();
                 if (roomIds != null) {
                     for (String rId : roomIds) {
                         if (roomId.equals(rId)) {
-                            hasRoom = true;
+                            containsRoom = true;
                             break;
                         }
                     }
                 }
             }
 
-            // Nếu đơn này có chứa phòng, tiến hành kiểm tra giao thoa khoảng thời gian
-            if (hasRoom) {
-                // Điều kiện giao nhau: checkIn_mới < checkOut_cũ AND checkOut_mới > checkIn_cũ
+            if (containsRoom) {
                 if (checkIn.isBefore(b.getExpectedCheckOutDate()) && checkOut.isAfter(b.getCheckInDate())) {
-                    return false; // Phòng đã bị trùng lịch!
+                    return false; // Đã bị đụng độ lịch ở một Booking chính thức!
                 }
             }
         }
-        return true; // Phòng hoàn toàn trống
+
+        return true;
     }
 
     // =========================================================================
-    // 2. QUẢN LÝ ĐẶT PHÒNG (SỬ DỤNG BookingList)
+    // 2. QUẢN LÝ PHIẾU YÊU CẦU ĐẶT PHÒNG (BOOKING REQUEST & DEPOSIT)
     // =========================================================================
 
     /**
-     * Thêm một Đặt phòng mới thông qua BookingList.add()
+     * Tiếp nhận yêu cầu qua điện thoại/trực tuyến và lưu BookingRequest
+     */
+    public boolean createBookingRequest(BookingRequest request) {
+        if (request == null) return false;
+        try {
+            requestList.add(request);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Xác nhận đóng tiền cọc cho Yêu cầu đặt phòng
+     */
+    public Deposit processDeposit(String requestId, double amount, PaymentMethod method, 
+                                  String receivedBy, String referenceNo) {
+        BookingRequest req = findRequestById(requestId);
+        if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT) {
+            return null;
+        }
+
+        // Tạo phiếu cọc mới
+        String depositId = generateDepositId();
+        Deposit deposit = new Deposit(depositId, requestId, amount, method, receivedBy, referenceNo);
+        
+        // Phân bổ tiền cọc vào các dòng BookingDetail của Request
+        double depositPerRoom = amount / req.getDetailCount();
+        BookingDetail[] details = req.getDetails();
+        for (int i = 0; i < req.getDetailCount(); i++) {
+            if (details[i] != null) {
+                details[i].setDepositShare(depositPerRoom);
+            }
+        }
+
+        // Cập nhật trạng thái Request sang CONFIRMED
+        req.confirmDeposit();
+        return deposit;
+    }
+
+    /**
+     * Tìm phiếu yêu cầu theo mã requestId
+     */
+    public BookingRequest findRequestById(String requestId) {
+        if (requestId == null) return null;
+        List<BookingRequest> allRequests = requestList.getAll();
+        for (BookingRequest req : allRequests) {
+            if (requestId.equalsIgnoreCase(req.getRequestId())) {
+                return req;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Hủy Yêu cầu đặt phòng (Duyệt bởi Quản lý)
+     */
+    public boolean cancelBookingRequest(String requestId, String reason, boolean refundDeposit, Deposit deposit) {
+        BookingRequest req = findRequestById(requestId);
+        if (req == null || !req.isActive()) return false;
+
+        req.cancel(reason);
+        if (deposit != null) {
+            if (refundDeposit) {
+                deposit.refund();
+            } else {
+                deposit.forfeit(); // Tịch thu cọc (mất cọc)
+            }
+        }
+        return true;
+    }
+
+    // =========================================================================
+    // 3. QUẢN LÝ PHIẾU ĐẶT PHÒNG CHÍNH THỨC (BOOKING)
+    // =========================================================================
+
+    /**
+     * Chuyển đổi từ BookingRequest đã cọc (CONFIRMED) sang Booking chính thức khi khách đến nhận phòng
+     */
+    public Booking convertRequestToBooking(String requestId, String employeeId, String note) {
+        BookingRequest req = findRequestById(requestId);
+        if (req == null || req.getRequestStatus() != RequestStatus.CONFIRMED) {
+            return null;
+        }
+
+        String bookingId = generateBookingId();
+        Booking booking;
+
+        if ("GROUP".equalsIgnoreCase(req.getBookingType())) {
+            String[] roomIds = new String[req.getDetailCount()];
+            BookingDetail[] details = req.getDetails();
+            for (int i = 0; i < req.getDetailCount(); i++) {
+                roomIds[i] = details[i].getOriginalRoomId();
+                details[i].setBookingId(bookingId);
+            }
+            // Truyền đúng 10 tham số chuẩn của GroupBooking
+            booking = new GroupBooking(bookingId, req.getRequestId(), req.getCustomerId(), 
+                    req.getExpectedCheckInDate(), req.getExpectedCheckOutDate(), 
+                    employeeId, note, req.getGroupName(), roomIds, 20);
+        } else {
+            BookingDetail detail = req.getDetails()[0];
+            detail.setBookingId(bookingId);
+            // Truyền đúng 9 tham số chuẩn của IndividualBooking
+            booking = new IndividualBooking(bookingId, req.getRequestId(), req.getCustomerId(), 
+                    req.getExpectedCheckInDate(), req.getExpectedCheckOutDate(), 
+                    employeeId, note, detail.getOriginalRoomId(), detail.getGuestCount());
+        }
+
+        if (addBooking(booking)) {
+            req.expire();
+            return booking;
+        }
+        return null;
+    }
+
+    /**
+     * Thêm đơn đặt phòng trực tiếp vào BookingList
      */
     public boolean addBooking(Booking booking) {
         if (booking == null) return false;
@@ -107,53 +229,24 @@ public class BookingManager {
             bookingList.add(booking);
             return true;
         } catch (IllegalArgumentException | IllegalStateException e) {
-            // Bắt ngoại lệ từ BookingList nếu trùng mã, null hoặc mảng đầy
             return false;
         }
     }
 
-    /**
-     * Tìm kiếm đơn đặt phòng theo mã bookingId thông qua BookingList.findById()
-     */
     public Booking findBookingById(String bookingId) {
         return bookingList.findById(bookingId);
     }
 
-    /**
-     * Hủy đặt phòng theo mã
-     */
-    public boolean cancelBooking(String bookingId) {
-        Booking b = findBookingById(bookingId);
-        if (b != null && b.getStatus() != BookingStatus.COMPLETED) {
-            b.cancel();
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Xóa một Đặt phòng ra khỏi danh sách thông qua BookingList.removeById()
-     */
     public boolean removeBookingById(String bookingId) {
         return bookingList.removeById(bookingId);
     }
 
-    /**
-     * Sinh mã Đặt phòng tự động (BK001, BK002...)
-     */
-    public String generateBookingId() {
-        return String.format("BK%03d", nextBookingId++);
-    }
-
-    /**
-     * Lấy danh sách tất cả các Booking hiện tại dưới dạng mảng thuần
-     */
     public Booking[] getAllBookings() {
         return bookingList.getAll();
     }
 
     /**
-     * Lấy danh sách Booking đã xác nhận (CONFIRMED) phục vụ module Lưu trú (P4) check-in
+     * Lấy danh sách Booking đã xác nhận để P4 phục vụ check-in
      */
     public Booking[] getConfirmedBookings() {
         Booking[] allBookings = bookingList.getAll();
@@ -175,84 +268,23 @@ public class BookingManager {
     }
 
     // =========================================================================
-    // 3. QUẢN LÝ YÊU CẦU THAY ĐỔI (SỬ DỤNG BookingRequestList)
+    // 4. BỘ SINH MÃ TỰ ĐỘNG (AUTO-GENERATOR)
     // =========================================================================
 
-    /**
-     * Tạo một Yêu cầu thay đổi mới thông qua BookingRequestList.add()
-     */
-    public boolean createRequest(BookingRequest request) {
-        if (request == null) return false;
-        try {
-            requestList.add(request);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+    public String generateBookingId() {
+        return String.format("BK%03d", nextBookingId++);
     }
 
-    /**
-     * Duyệt Yêu cầu thay đổi (Chỉ MANAGER/ADMIN gọi)
-     */
-    public boolean approveRequest(String requestId, String managerId) {
-        BookingRequest req = findRequestById(requestId);
-        if (req == null || !req.isPending()) return false;
-
-        Booking booking = findBookingById(req.getBookingId());
-        if (booking == null) return false;
-
-        // Xử lý áp dụng thay đổi theo từng loại yêu cầu (RequestType)
-        if (req.getRequestType() == RequestType.CANCEL) {
-            booking.cancel();
-        } else if (req.getRequestType() == RequestType.CHANGE_DATE || req.getRequestType() == RequestType.EXTEND) {
-            if (req.getNewCheckInDate() != null) {
-                booking.setCheckInDate(req.getNewCheckInDate());
-            }
-            if (req.getNewCheckOutDate() != null) {
-                booking.setExpectedCheckOutDate(req.getNewCheckOutDate());
-            }
-        } else if (req.getRequestType() == RequestType.CHANGE_ROOM) {
-            if (booking instanceof IndividualBooking && req.getNewRoomId() != null) {
-                ((IndividualBooking) booking).setRoomId(req.getNewRoomId());
-            }
-        }
-
-        // Đánh dấu yêu cầu đã được duyệt
-        req.approve(managerId);
-        return true;
-    }
-
-    /**
-     * Từ chối Yêu cầu thay đổi
-     */
-    public boolean rejectRequest(String requestId, String managerId) {
-        BookingRequest req = findRequestById(requestId);
-        if (req != null && req.isPending()) {
-            req.reject(managerId);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Tìm Yêu cầu theo mã requestId thông qua BookingRequestList.getAll()
-     */
-    public BookingRequest findRequestById(String requestId) {
-        if (requestId == null) return null;
-        List<BookingRequest> allRequests = requestList.getAll();
-        for (BookingRequest req : allRequests) {
-            if (requestId.equalsIgnoreCase(req.getRequestId())) {
-                return req;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Sinh mã Yêu cầu tự động (REQ001, REQ002...)
-     */
     public String generateRequestId() {
         return String.format("REQ%03d", nextRequestId++);
+    }
+
+    public String generateDetailId() {
+        return String.format("DT%03d", nextDetailId++);
+    }
+
+    public String generateDepositId() {
+        return String.format("DEP%03d", nextDepositId++);
     }
 
     public int getBookingCount() {

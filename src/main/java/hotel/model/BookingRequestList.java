@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Manages booking requests in a dynamically sized list.
+ * Quản lý danh sách các yêu cầu đặt phòng (BookingRequest)
  */
 public class BookingRequestList {
     private final ArrayList<BookingRequest> bookingRequests = new ArrayList<>();
