@@ -3,6 +3,7 @@ package hotel.model;
 import hotel.util.CheckingExpression;
 import java.time.LocalDateTime;
 
+// Class Ghi nhận Hoàn tiền (Ví dụ khách đặt cọc 1 triệu, nhưng tiền phòng có 800k, phải hoàn lại 200k)
 public class RefundRecord {
     private String refundId;
     private String invoiceId;
@@ -25,5 +26,7 @@ public class RefundRecord {
         this.amount = amount;
     }
     
-    public double getAmount() { return amount; }
+    public double getAmount() { 
+        return amount; 
+    }
 }

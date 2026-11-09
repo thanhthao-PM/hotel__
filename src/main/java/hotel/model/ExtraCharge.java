@@ -9,6 +9,7 @@ public class ExtraCharge implements Invoice.InvoiceAdjustment {
     private double amount;
     private String createdBy;
 
+    // Constructor
     public ExtraCharge(String chargeId, String invoiceId, String reason, double amount, String createdBy) {
         this.chargeId = chargeId;
         this.invoiceId = invoiceId;
@@ -18,10 +19,11 @@ public class ExtraCharge implements Invoice.InvoiceAdjustment {
     }
 
     public void setAmount(double amount) {
-        CheckingExpression.checkPositiveDouble(amount, "Phụ thu phải > 0"); 
+        CheckingExpression.checkPositiveDouble(amount, "Phụ thu phải lớn hơn 0"); 
         this.amount = amount;
     }
 
+    // [OOP - ĐA HÌNH]: Phụ thu là lấy thêm tiền của khách, nên ta trả về số DƯƠNG.
     @Override
     public double getAdjustmentAmount() {
         return amount; 
