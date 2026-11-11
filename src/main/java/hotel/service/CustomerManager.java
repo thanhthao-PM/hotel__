@@ -7,6 +7,7 @@ import hotel.storage.IFileHandler;
 import hotel.util.CheckingExpression;
 
 import java.io.BufferedReader;
+import java.util.ArrayList;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -85,6 +86,15 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
     }
 
     // ================= TÌM KIẾM =================
+
+    @Override
+    public ArrayList<Person> getAll() {
+        ArrayList<Person> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(items[i]);
+        }
+        return list;
+    }
 
     @Override
     public Person findById(String id) {
@@ -178,7 +188,6 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
         return items[index];
     }
 
-    @Override
     public void displayAll() {
         if (count == 0) {
             System.out.println("Danh sách khách hàng trống");

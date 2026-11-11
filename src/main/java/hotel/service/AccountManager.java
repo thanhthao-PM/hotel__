@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -181,7 +182,6 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     }
 
 
-    @Override
     public void displayAll() {
         if (count == 0) {
             System.out.println("Danh sách tài khoản trống");
@@ -199,6 +199,15 @@ public class AccountManager implements IManager<Account>, IFileHandler {
                     a.isLocked() ? "Đã khóa" : "Hoạt động",
                     a.getFailedAttempts(), lastLogin);
         }
+    }
+
+    @Override
+    public ArrayList<Account> getAll() {
+        ArrayList<Account> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(items[i]);
+        }
+        return list;
     }
 
     @Override public void readFile() {

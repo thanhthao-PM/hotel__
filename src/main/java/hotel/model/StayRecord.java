@@ -1,5 +1,6 @@
 package hotel.model;
 
+import hotel.model.enums.StayStatus;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;

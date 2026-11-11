@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,6 +63,15 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         if (e == null) return false;
         e.deactivate(); // Xoá mềm
         return false;
+    }
+
+    @Override
+    public ArrayList<Employee> getAll() {
+        ArrayList<Employee> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(items[i]);
+        }
+        return list;
     }
 
     @Override public Employee findById(String id) {
@@ -132,7 +142,6 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         }
     }
 
-    @Override
     public void displayAll() {
         if (count == 0) {
             System.out.println("Danh sách nhân viên trống");
