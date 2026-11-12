@@ -49,7 +49,7 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         if(e == null) return false;
         // Tìm nhân viên và update
         for (int i = 0; i < this.count; i++) {
-            if(items[i].getId() == e.getId()) {
+            if (items[i].getId().equals(e.getId())) {
                 items[i] = e;
                 return true;
             }
@@ -62,7 +62,7 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         Employee e = findById(id);
         if (e == null) return false;
         e.deactivate(); // Xoá mềm
-        return false;
+        return true;
     }
 
     @Override
@@ -77,7 +77,7 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
     @Override public Employee findById(String id) {
         if (id == null || id.isEmpty()) return null;
         for (int i = 0; i < count; i++) {
-            if (items[i].getId() == id) return items[i];
+            if (items[i].getId().equals(id)) return items[i];
         }
         return null;
     }

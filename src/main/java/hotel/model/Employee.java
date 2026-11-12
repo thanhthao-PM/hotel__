@@ -56,7 +56,7 @@ public class Employee extends Person {
 
     public static Employee fromFileString(String fileString) {
         String[] parts = fileString.split("\\|", -1);
-        if (parts.length != 13 || !TYPE_TAG.equals(parts[0])) {
+        if (parts.length != 12 || !TYPE_TAG.equals(parts[0])) {
             throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo Employee từ fileString.");
         }
 

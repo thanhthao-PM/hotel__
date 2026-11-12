@@ -22,7 +22,7 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     private static final int INITIAL_CAPACITY = 10;
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "admin123";   // phải đủ độ dài tối thiểu
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private Account[] items;
     private int count;
