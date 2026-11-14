@@ -25,7 +25,9 @@ public class Employee extends Person {
     }
 
     public void setHireDate(LocalDate hireDate) {
-        CheckingExpression.checkNotNullOrEmpty(String.valueOf(hireDate), "Ngày tuyển dụng không được để trống");
+        if (hireDate == null) {
+            throw new IllegalArgumentException("Ngày tuyển dụng không được để trống");
+        }
         this.hireDate = hireDate;
     }
 

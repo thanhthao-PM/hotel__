@@ -3,6 +3,7 @@ package hotel.ui;
 import hotel.model.Account;
 import hotel.model.Customer;
 import hotel.model.Employee;
+import hotel.model.GuestMember;
 import hotel.model.Person;
 import hotel.model.enums.Gender;
 import hotel.model.enums.Role;
@@ -14,6 +15,7 @@ import hotel.util.CheckingExpression;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Scanner;
  
 /**
@@ -226,8 +228,9 @@ public class ConsoleMenu {
             System.out.println("1. Đặt phòng");
             System.out.println("2. Lưu trú");
             System.out.println("3. Thanh toán");
-            System.out.println("4. Duyệt yêu cầu thay đổi đặt phòng");
+            System.out.println("4. Duyệt hủy phiếu đặt phòng");
             System.out.println("5. Khách hàng");
+            System.out.println("6. Thành viên đoàn");
             System.out.println("0. Quay lại");
             int choice = readChoice();
             if (choice == 0) return;
@@ -237,6 +240,7 @@ public class ConsoleMenu {
                 case 3: showPaymentMenu();   break;
                 case 4: showRequestMenu();   break;
                 case 5: showCustomerMenu();  break;
+                case 6: showGuestMenu();     break;
                 default: System.out.println("Lựa chọn không hợp lệ.");
             }
         }
@@ -247,12 +251,14 @@ public class ConsoleMenu {
             printTitle("ĐẶT PHÒNG VÀ LƯU TRÚ");
             System.out.println("1. Đặt phòng");
             System.out.println("2. Lưu trú (nhận phòng, dịch vụ, đổi phòng, trả phòng)");
+            System.out.println("3. Thành viên đoàn");
             System.out.println("0. Quay lại");
             int choice = readChoice();
             if (choice == 0) return;
             switch (choice) {
                 case 1: showBookingMenu(); break;
                 case 2: showStayMenu();    break;
+                case 3: showGuestMenu();   break;
                 default: System.out.println("Lựa chọn không hợp lệ.");
             }
         }
@@ -261,7 +267,7 @@ public class ConsoleMenu {
     private void showApprovalMenu() {
         while (true) {
             printTitle("DUYỆT VÀ XỬ LÝ");
-            System.out.println("1. Duyệt yêu cầu thay đổi đặt phòng");
+            System.out.println("1. Duyệt hủy phiếu đặt phòng (hoàn / mất cọc)");
             System.out.println("2. Duyệt giảm giá");
             System.out.println("3. Hủy hóa đơn");
             System.out.println("4. Hoàn tiền");
@@ -301,10 +307,10 @@ public class ConsoleMenu {
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách phòng (P2)");        break;   // TODO(P2): roomManager.displayAll()
-                    case 2: showCustomerMenu();                       break;
+                    case 2: showPostListMenu(false);                   break;
                     case 3:
                         if (isEmployeeRole()) noPermission();          // kiểm tra quyền ngay trong xử lý, không chỉ ẩn menu
-                        else showStaffMenu();
+                        else showPostListMenu(true);
                         break;
                     case 4: notReady("Danh sách đặt phòng (P3)");    break;   // TODO(P3)
                     case 5: notReady("Khách đang lưu trú (P4)");     break;   // TODO(P4)
@@ -317,7 +323,122 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
+    private void showPostListMenu(boolean staff) {
+        displayList(staff);
+        while (true) {
+            printTitle("DANH SÁCH " + (staff ? "NHÂN VIÊN" : "KHÁCH HÀNG"));
+            System.out.println("1. Xem chi tiết");
+            System.out.println("2. Tìm kiếm");
+            System.out.println("3. Lọc theo trạng thái");
+            System.out.println("4. Sắp xếp theo tên");
+            if (canEdit()) {
+                System.out.println("5. Thêm mới");
+                System.out.println("6. Sửa");
+                System.out.println("7. Xóa (ngưng hoạt động)");
+            }
+            System.out.println("0. Quay lại");
+
+            int choice = readChoice();
+            if (choice == 0) return;
+            try {
+                switch (choice) {
+                    case 1:
+                        showDetail(staff);
+                        break;
+                    case 2:
+                        if (staff) searchEmployee();
+                        else searchCustomer();
+                        break;
+                    case 3:
+                        filterByStatus(staff);
+                        break;
+                    case 4:
+                        if (staff) employeeManager.sortByName();
+                        else customerManager.sortByName();
+                        displayList(staff);
+                        break;
+                    case 5:
+                    case 6:
+                    case 7:
+                        if (!canEdit()) {
+                            noPermission();
+                            break;
+                        }
+                        if (choice == 5) {
+                            if (staff) addEmployee();
+                            else addCustomer();
+                        } else if (choice == 6) {
+                            if (staff) editEmployee();
+                            else editCustomer();
+                        } else {
+                            if (staff) removeEmployee();
+                            else removeCustomer();
+                        }
+                        displayList(staff);
+                        break;
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void displayList(boolean staff) {
+        if (staff) employeeManager.displayAll();
+        else customerManager.displayAll();
+    }
+
+    private void showDetail(boolean staff) {
+        String id = readNonEmpty("Mã cần xem: ").toUpperCase();
+        Person person = staff ? employeeManager.findById(id) : customerManager.findById(id);
+        if (person == null) {
+            System.out.println("Không tìm thấy.");
+            return;
+        }
+        System.out.println("Mã            : " + person.getId());
+        System.out.println("Loại          : " + person.getRoleName());
+        System.out.println("Họ tên        : " + person.getFullName());
+        System.out.println("SĐT           : " + person.getPhone());
+        System.out.println("Giới tính     : " + person.getGender());
+        System.out.println("CCCD/Hộ chiếu : " + person.getIdentityNumber());
+        System.out.println("Ngày sinh     : " + person.getDateOfBirth().format(DATE_FORMAT));
+        System.out.println("Địa chỉ       : " + person.getAddress());
+        System.out.println("Trạng thái    : " + (person.isActive() ? "Hoạt động" : "Ngưng"));
+        if (person instanceof Customer) {
+            System.out.println("Email         : " + ((Customer) person).getEmail());
+        } else if (person instanceof GuestMember) {
+            GuestMember guest = (GuestMember) person;
+            System.out.println("Người đại diện: " + guest.getRepresentativeId());
+            System.out.println("Quan hệ       : " + guest.getRelationship());
+        } else if (person instanceof Employee) {
+            Employee employee = (Employee) person;
+            System.out.println("Chức danh     : " + employee.getPosition());
+            System.out.println("Lương         : " + employee.getSalary());
+            System.out.println("Ngày vào làm  : " + employee.getHireDate().format(DATE_FORMAT));
+        }
+    }
+
+    private void filterByStatus(boolean staff) {
+        System.out.println("Lọc: 1. Đang hoạt động   2. Đã ngưng");
+        int choice = readChoice();
+        if (choice != 1 && choice != 2) {
+            System.out.println("Lựa chọn không hợp lệ.");
+            return;
+        }
+        ArrayList<Person> all = new ArrayList<>();
+        if (staff) all.addAll(employeeManager.getAll());
+        else all.addAll(customerManager.getAll());
+
+        ArrayList<Person> matched = new ArrayList<>();
+        for (Person person : all) {
+            if (person.isActive() == (choice == 1)) matched.add(person);
+        }
+        printPersons(matched.toArray(new Person[0]));
+    }
+
     // ============================================================
     // P1: TÀI KHOẢN (chỉ ADMIN)
     // ============================================================
@@ -451,6 +572,7 @@ public class ConsoleMenu {
             System.out.println("3. Thêm nhân viên");
             System.out.println("4. Sửa nhân viên");
             System.out.println("5. Xóa (ngưng hoạt động)");
+            System.out.println("6. Tìm kiếm");
             System.out.println("0. Quay lại");
  
             int choice = readChoice();
@@ -464,8 +586,9 @@ public class ConsoleMenu {
                         employeeManager.displayAll();
                         break;
                     case 3: addEmployee();                 break;
-                    case 4: notReady("Sửa nhân viên");     break;   // TODO(P1)
+                    case 4: editEmployee();                break;
                     case 5: removeEmployee();              break;
+                    case 6: searchEmployee();              break;
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -497,13 +620,63 @@ public class ConsoleMenu {
  
     private void removeEmployee() {
         String id = readNonEmpty("Mã nhân viên: ").toUpperCase();
-        if (!confirm("Ngưng hoạt động nhân viên " + id + "?")) return;
-        if (employeeManager.remove(id)) {
-            System.out.println("Đã ngưng hoạt động.");
-        } else {
+        Employee target = employeeManager.findById(id);
+        if (target == null) {
             System.out.println("Không tìm thấy nhân viên.");
+            return;
         }
-        // TODO(P1): Manager chỉ được xóa nhân viên thường; ngưng nhân viên thì khóa Account của họ
+        if (id.equals(currentUser.getEmployeeId())) {
+            System.out.println("Không thể tự ngưng hoạt động chính mình.");
+            return;
+        }
+        if (!canManageEmployee(target)) {
+            System.out.println("Bạn chỉ được ngưng nhân viên có quyền EMPLOYEE.");
+            return;
+        }
+        if (!confirm("Ngưng hoạt động nhân viên " + id + "?")) return;
+        employeeManager.remove(id);
+        System.out.println("Đã ngưng hoạt động.");
+    }
+
+    private boolean canManageEmployee(Employee target) {
+        if (isEmployeeRole()) return false;
+        if (currentUser.getRole() == Role.ADMIN) return true;
+        Account account = accountManager.findByEmployeeId(target.getId());
+        return account == null || account.getRole() == Role.EMPLOYEE;
+    }
+
+    private void editEmployee() {
+        String id = readNonEmpty("Mã nhân viên cần sửa: ").toUpperCase();
+        Employee employee = employeeManager.findById(id);
+        if (employee == null) {
+            System.out.println("Không tìm thấy nhân viên.");
+            return;
+        }
+        if (!canManageEmployee(employee)) {
+            System.out.println("Bạn chỉ được sửa nhân viên có quyền EMPLOYEE.");
+            return;
+        }
+        while (true) {
+            printTitle("SỬA NHÂN VIÊN " + employee.getId() + " - " + employee.getFullName());
+            printCommonFieldMenu();
+            System.out.println("7. Chức danh   8. Lương   9. Ngày vào làm   0. Quay lại");
+            int choice = readChoice();
+            if (choice == 0) return;
+            try {
+                if (editCommonField(employee, choice)) continue;
+                switch (choice) {
+                    case 7: employee.setPosition(readNonEmpty("Chức danh mới: ")); break;
+                    case 8: employee.setSalary(readNonNegativeDouble("Lương mới: ")); break;
+                    case 9: employee.setHireDate(readDate("Ngày vào làm (dd/MM/yyyy): ")); break;
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
+                        continue;
+                }
+                System.out.println("Đã cập nhật.");
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
     }
  
     // ============================================================
@@ -513,12 +686,13 @@ public class ConsoleMenu {
         while (true) {
             printTitle("KHÁCH HÀNG");
             System.out.println("1. Danh sách");
-            System.out.println("2. Tìm theo tên");
+            System.out.println("2. Tìm kiếm");
             System.out.println("3. Thêm khách hàng");
             System.out.println("4. Sửa khách hàng");
             if (!isEmployeeRole()) {
                 System.out.println("5. Xóa (ngưng hoạt động)");
             }
+            System.out.println("6. Thành viên đoàn");
             System.out.println("0. Quay lại");
  
             int choice = readChoice();
@@ -527,13 +701,14 @@ public class ConsoleMenu {
             try {
                 switch (choice) {
                     case 1: customerManager.displayAll();   break;
-                    case 2: searchCustomerByName();         break;
+                    case 2: searchCustomer();               break;
                     case 3: addCustomer();                  break;
-                    case 4: notReady("Sửa khách hàng");     break;   // TODO(P1)
+                    case 4: editCustomer();                  break;
                     case 5:
                         if (isEmployeeRole()) noPermission();
                         else removeCustomer();
                         break;
+                    case 6: showGuestMenu();                break;
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -542,19 +717,245 @@ public class ConsoleMenu {
         }
     }
  
-    private void searchCustomerByName() {
-        String keyword = readNonEmpty("Nhập tên cần tìm: ");
-        Person[] found = customerManager.findByName(keyword);
-        if (found.length == 0) {
+    private void editCustomer() {
+        String id = readNonEmpty("Mã khách hàng cần sửa: ").toUpperCase();
+        Customer customer = customerManager.findCustomerById(id);
+        if (customer == null) {
+            System.out.println("Không tìm thấy khách hàng.");
+            return;
+        }
+        while (true) {
+            printTitle("SỬA KHÁCH HÀNG " + customer.getId() + " - " + customer.getFullName());
+            printCommonFieldMenu();
+            System.out.println("7. Email   0. Quay lại");
+            int choice = readChoice();
+            if (choice == 0) return;
+            try {
+                if (editCommonField(customer, choice)) continue;
+                if (choice == 7) {
+                    customer.setEmail(readEmail());
+                    System.out.println("Đã cập nhật.");
+                } else {
+                    System.out.println("Lựa chọn không hợp lệ.");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void showGuestMenu() {
+        while (true) {
+            printTitle("THÀNH VIÊN ĐOÀN");
+            System.out.println("1. Danh sách thành viên theo người đại diện");
+            System.out.println("2. Thêm thành viên");
+            System.out.println("3. Sửa thành viên");
+            if (canEdit()) System.out.println("4. Xóa (ngưng hoạt động)");
+            System.out.println("0. Quay lại");
+
+            int choice = readChoice();
+            if (choice == 0) return;
+            try {
+                switch (choice) {
+                    case 1: listGuests(); break;
+                    case 2: addGuest(); break;
+                    case 3: editGuest(); break;
+                    case 4:
+                        if (!canEdit()) noPermission();
+                        else removeGuest();
+                        break;
+                    default: System.out.println("Lựa chọn không hợp lệ.");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void listGuests() {
+        String representativeId = readNonEmpty("Mã khách đại diện: ").toUpperCase();
+        if (customerManager.findCustomerById(representativeId) == null) {
+            System.out.println("Không tìm thấy khách đại diện.");
+            return;
+        }
+        printPersons(customerManager.findGuestsByRepresentative(representativeId));
+    }
+
+    private void addGuest() {
+        String representativeId = readNonEmpty("Mã khách đại diện: ").toUpperCase();
+        if (customerManager.findCustomerById(representativeId) == null) {
+            System.out.println("Không tìm thấy khách đại diện.");
+            return;
+        }
+        String name = readNonEmpty("Họ tên: ");
+        String phone = readPhone();
+        Gender gender = readGender();
+        String identity = readIdentityOptional();
+        LocalDate dateOfBirth = readDate("Ngày sinh (dd/MM/yyyy): ");
+        String address = readNonEmpty("Địa chỉ: ");
+        String relationship = readNonEmpty("Quan hệ với người đại diện: ");
+
+        GuestMember guest = new GuestMember(name, phone, gender, identity, dateOfBirth,
+                address, true, representativeId, relationship);
+        if (customerManager.add(guest)) {
+            System.out.println("Đã thêm thành viên " + guest.getId() + ".");
+        } else {
+            System.out.println("Không thêm được: trùng mã, CCCD hoặc người đại diện không hợp lệ.");
+        }
+    }
+
+    private void editGuest() {
+        String id = readNonEmpty("Mã thành viên cần sửa: ").toUpperCase();
+        Person person = customerManager.findById(id);
+        if (!(person instanceof GuestMember)) {
+            System.out.println("Không tìm thấy thành viên đoàn.");
+            return;
+        }
+        GuestMember guest = (GuestMember) person;
+        while (true) {
+            printTitle("SỬA THÀNH VIÊN " + guest.getId() + " - " + guest.getFullName());
+            printCommonFieldMenu();
+            System.out.println("7. Quan hệ với người đại diện   0. Quay lại");
+            int choice = readChoice();
+            if (choice == 0) return;
+            try {
+                if (editCommonField(guest, choice)) continue;
+                if (choice == 7) {
+                    guest.setRelationship(readNonEmpty("Quan hệ mới: "));
+                    System.out.println("Đã cập nhật.");
+                } else {
+                    System.out.println("Lựa chọn không hợp lệ.");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private void removeGuest() {
+        String id = readNonEmpty("Mã thành viên: ").toUpperCase();
+        if (!(customerManager.findById(id) instanceof GuestMember)) {
+            System.out.println("Không tìm thấy thành viên đoàn.");
+            return;
+        }
+        if (!confirm("Ngưng hoạt động thành viên " + id + "?")) return;
+        customerManager.remove(id);
+        System.out.println("Đã ngưng hoạt động.");
+    }
+
+    private boolean editCommonField(Person person, int choice) {
+        switch (choice) {
+            case 1:
+                person.setName(readNonEmpty("Họ tên mới: "));
+                break;
+            case 2: {
+                String phone = readPhone();
+                if (isTakenByOther(person, findSamePhone(person, phone))) {
+                    System.out.println("SĐT đã được dùng.");
+                    return true;
+                }
+                person.setPhone(phone);
+                break;
+            }
+            case 3:
+                person.setGender(readGender());
+                break;
+            case 4: {
+                String identity = person instanceof GuestMember ? readIdentityOptional() : readIdentity();
+                if (isTakenByOther(person, findSameIdentity(person, identity))) {
+                    System.out.println("CCCD/Hộ chiếu đã được dùng.");
+                    return true;
+                }
+                person.setIdentityNumber(identity);
+                break;
+            }
+            case 5:
+                person.setDateOfBirth(readDate("Ngày sinh (dd/MM/yyyy): "));
+                break;
+            case 6:
+                person.setAddress(readNonEmpty("Địa chỉ mới: "));
+                break;
+            default:
+                return false;
+        }
+        System.out.println("Đã cập nhật.");
+        return true;
+    }
+
+    private void printCommonFieldMenu() {
+        System.out.println("1. Họ tên   2. SĐT   3. Giới tính   4. CCCD/Hộ chiếu   5. Ngày sinh   6. Địa chỉ");
+    }
+
+    private Person[] findSamePhone(Person person, String phone) {
+        if (person instanceof Employee) return employeeManager.findByPhone(phone);
+        if (person instanceof Customer) return customerManager.findByPhone(phone);
+        return null;
+    }
+
+    private Person[] findSameIdentity(Person person, String identity) {
+        if (identity.isEmpty()) return null;
+        Person found = person instanceof Employee
+                ? employeeManager.findByIdentityNumber(identity)
+                : customerManager.findByIdentityNumber(identity);
+        return found == null ? null : new Person[]{found};
+    }
+
+    private boolean isTakenByOther(Person person, Person[] matches) {
+        if (matches == null) return false;
+        for (Person match : matches) {
+            if (!match.getId().equals(person.getId())) return true;
+        }
+        return false;
+    }
+
+    private void searchEmployee() {
+        System.out.println("Tìm theo: 1. Tên   2. Mã   3. SĐT   4. CCCD/Hộ chiếu");
+        Person[] found;
+        switch (readChoice()) {
+            case 1: found = employeeManager.findByName(readNonEmpty("Nhập tên: ")); break;
+            case 2: found = toArray(employeeManager.findById(readNonEmpty("Nhập mã: ").toUpperCase())); break;
+            case 3: found = employeeManager.findByPhone(readNonEmpty("Nhập SĐT: ")); break;
+            case 4: found = toArray(employeeManager.findByIdentityNumber(
+                    readNonEmpty("Nhập CCCD/Hộ chiếu: "))); break;
+            default:
+                System.out.println("Lựa chọn không hợp lệ.");
+                return;
+        }
+        printPersons(found);
+    }
+
+    private void searchCustomer() {
+        System.out.println("Tìm theo: 1. Tên   2. Mã   3. SĐT   4. CCCD/Hộ chiếu");
+        Person[] found;
+        switch (readChoice()) {
+            case 1: found = customerManager.findByName(readNonEmpty("Nhập tên: ")); break;
+            case 2: found = toArray(customerManager.findById(readNonEmpty("Nhập mã: ").toUpperCase())); break;
+            case 3: found = customerManager.findByPhone(readNonEmpty("Nhập SĐT: ")); break;
+            case 4: found = toArray(customerManager.findByIdentityNumber(
+                    readNonEmpty("Nhập CCCD/Hộ chiếu: "))); break;
+            default:
+                System.out.println("Lựa chọn không hợp lệ.");
+                return;
+        }
+        printPersons(found);
+    }
+
+    private Person[] toArray(Person person) {
+        return person == null ? new Person[0] : new Person[]{person};
+    }
+
+    private void printPersons(Person[] people) {
+        if (people == null || people.length == 0) {
             System.out.println("Không tìm thấy.");
             return;
         }
-        for (int i = 0; i < found.length; i++) {
-            System.out.println(found[i].getId() + " | " + found[i].getFullName()
-                    + " | " + found[i].getPhone() + " | " + found[i].getRoleName());
+        for (Person person : people) {
+            System.out.println(person.getId() + " | " + person.getFullName() + " | " + person.getPhone()
+                    + " | " + person.getRoleName() + " | "
+                    + (person.isActive() ? "Hoạt động" : "Ngưng"));
         }
     }
- 
+
     private void addCustomer() {
         System.out.println("--- Thêm khách hàng ---");
         String name = readNonEmpty("Họ tên: ");
@@ -781,11 +1182,13 @@ public class ConsoleMenu {
     private void showBookingMenu() {
         while (true) {
             printTitle("ĐẶT PHÒNG");
-            System.out.println("1. Đặt phòng cá nhân");
-            System.out.println("2. Đặt phòng đoàn");
-            System.out.println("3. Sửa đặt phòng");
-            System.out.println("4. Hủy đặt phòng");
-            System.out.println("5. Gửi yêu cầu thay đổi (chờ quản lý duyệt)");
+            System.out.println("1. Nhận yêu cầu đặt phòng qua điện thoại");
+            System.out.println("2. Đặt phòng trực tiếp - cá nhân");
+            System.out.println("3. Đặt phòng trực tiếp - đoàn");
+            System.out.println("4. Sửa đặt phòng");
+            System.out.println("5. Hủy đặt phòng");
+            System.out.println("6. Thu cọc");
+            System.out.println("7. Gửi đề nghị hủy (chờ quản lý duyệt)");
             System.out.println("0. Quay lại");
  
             int choice = readChoice();
@@ -793,11 +1196,13 @@ public class ConsoleMenu {
  
             try {
                 switch (choice) {
-                    case 1: notReady("Đặt phòng cá nhân"); break;   // TODO(P3)
-                    case 2: notReady("Đặt phòng đoàn"); break;   // TODO(P3)
-                    case 3: notReady("Sửa đặt phòng"); break;   // TODO(P3)
-                    case 4: notReady("Hủy đặt phòng"); break;   // TODO(P3)
-                    case 5: notReady("Gửi yêu cầu thay đổi (chờ quản lý duyệt)"); break;   // TODO(P3)
+                    case 1: notReady("Nhận yêu cầu đặt phòng qua điện thoại"); break;   // TODO(P3)
+                    case 2: notReady("Đặt phòng trực tiếp - cá nhân"); break;          // TODO(P3)
+                    case 3: notReady("Đặt phòng trực tiếp - đoàn"); break;             // TODO(P3)
+                    case 4: notReady("Sửa đặt phòng"); break;                          // TODO(P3)
+                    case 5: notReady("Hủy đặt phòng"); break;                          // TODO(P3)
+                    case 6: notReady("Thu cọc"); break;                                // TODO(P3)
+                    case 7: notReady("Gửi đề nghị hủy (chờ quản lý duyệt)"); break;    // TODO(P3)
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -813,10 +1218,11 @@ public class ConsoleMenu {
             return;
         }
         while (true) {
-            printTitle("DUYỆT YÊU CẦU");
-            System.out.println("1. Danh sách yêu cầu chờ duyệt");
-            System.out.println("2. Duyệt yêu cầu");
-            System.out.println("3. Từ chối yêu cầu");
+            printTitle("DUYỆT HỦY PHIẾU ĐẶT PHÒNG");
+            System.out.println("1. Danh sách đề nghị hủy chờ duyệt");
+            System.out.println("2. Duyệt hủy phiếu");
+            System.out.println("3. Quyết định hoàn hoặc mất cọc");
+            System.out.println("4. Từ chối đề nghị hủy");
             System.out.println("0. Quay lại");
  
             int choice = readChoice();
@@ -824,9 +1230,10 @@ public class ConsoleMenu {
  
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách yêu cầu chờ duyệt"); break;   // TODO(P3)
-                    case 2: notReady("Duyệt yêu cầu"); break;   // TODO(P3)
-                    case 3: notReady("Từ chối yêu cầu"); break;   // TODO(P3)
+                    case 1: notReady("Danh sách đề nghị hủy chờ duyệt"); break;   // TODO(P3)
+                    case 2: notReady("Duyệt hủy phiếu"); break;                   // TODO(P3)
+                    case 3: notReady("Quyết định hoàn hoặc mất cọc"); break;      // TODO(P3)
+                    case 4: notReady("Từ chối đề nghị hủy"); break;               // TODO(P3)
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1056,7 +1463,20 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
+    private String readIdentityOptional() {
+        while (true) {
+            System.out.print("CCCD/Hộ chiếu (Enter nếu là trẻ em chưa có): ");
+            String value = sc.nextLine().trim();
+            try {
+                CheckingExpression.checkValidIdentityNumber(value, true);
+                return value;
+            } catch (IllegalArgumentException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
     private String readEmail() {
         while (true) {
             System.out.print("Email: ");

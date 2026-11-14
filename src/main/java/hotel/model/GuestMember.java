@@ -72,14 +72,14 @@ public class GuestMember extends Person {
 
     // Constructor 1: TẠO MỚI KHÁCH HÀNG (ID TỰ ĐỘNG TĂNG)
     public GuestMember(String fullName, String phone, Gender gender, String identityNumber, LocalDate dateOfBirth, String address, boolean active, String representativeId, String relationship) {
-        super(PREFIX + String.format("%03d", generateNextNumber()), fullName, phone, gender, identityNumber, dateOfBirth, address, true, false);
+        super(PREFIX + String.format("%03d", generateNextNumber()), fullName, phone, gender, identityNumber, dateOfBirth, address, active, false);
         setRepresentativeId(representativeId);
         setRelationship(relationship);
     }
 
     // Constructor 2: TẠO KHÁCH HÀNG TỪ FILE (ID ĐƯỢC LẤY TRỰC TIẾP)
     public GuestMember(String id, String fullName, String phone, Gender gender, String identityNumber, LocalDate dateOfBirth, String address, boolean active, String representativeId, String relationship) {
-        super(id, fullName, phone, gender, identityNumber, dateOfBirth, address, true, false);
+        super(id, fullName, phone, gender, identityNumber, dateOfBirth, address, active, false);
         setRepresentativeId(representativeId);
         setRelationship(relationship);
     }

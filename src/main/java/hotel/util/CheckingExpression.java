@@ -76,7 +76,9 @@ public class CheckingExpression {
             return; // Cho phép rỗng nếu là trẻ em đi cùng
         }
         checkNotNullOrEmpty(identityNumber, "Số CCCD/Hộ chiếu không được để trống");
-        if (!CCCD_PATTERN.matcher(identityNumber).matches() && identityNumber.length() < 8) {
+        boolean isCccd = CCCD_PATTERN.matcher(identityNumber).matches();
+        boolean isPassport = identityNumber.matches("^[A-Za-z0-9]{8,9}$");
+        if (!isCccd && !isPassport) {
             throw new IllegalArgumentException("Số CCCD/Hộ chiếu không hợp lệ");
         }
     }
