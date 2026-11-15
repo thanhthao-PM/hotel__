@@ -1,5 +1,6 @@
 package hotel.model;
 
+import hotel.util.CheckingExpression;   
 import hotel.util.FileUtil;
 import hotel.util.Validator;
 import java.time.LocalDate;
@@ -21,6 +22,19 @@ public class RoomMaintenance {
     // Constructor đầy đủ
     public RoomMaintenance(String maintenanceId, String roomId, LocalDate startDate,
                            LocalDate endDate, String reason, String reportedBy, boolean closed) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(maintenanceId, "Mã bảo trì không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Ngày bắt đầu và ngày kết thúc bảo trì không được null");
+        }
+        // Cho phép bảo trì trong đúng một ngày (khớp với validatePeriod bên dưới)
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("Ngày kết thúc bảo trì không được trước ngày bắt đầu");
+        }
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do bảo trì không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(reportedBy, "Mã nhân viên báo hỏng không được để trống");
+
         this.maintenanceId = maintenanceId;
         this.roomId = roomId;
         this.startDate = startDate;

@@ -46,9 +46,18 @@ public class GuestMember extends Person {
     }
 
     public static GuestMember fromFileString(String fileString) {
+        // dòng file không được null hoặc rỗng
+        CheckingExpression.checkNotNullOrEmpty(fileString, "Dòng dữ liệu GuestMember không được để trống");
+
         String[] parts = fileString.split("\\|", -1);
         if (parts.length != 11 || !TYPE_TAG.equals(parts[0])) {
             throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo GuestMember từ fileString.");
+        }
+
+        //mã phải đúng dạng KHxxx trước khi cắt chuỗi, tránh StringIndexOutOfBoundsException
+        CheckingExpression.checkNotNullOrEmpty(parts[1], "Mã thành viên không được để trống");
+        if (!parts[1].startsWith(PREFIX) || parts[1].length() <= PREFIX.length()) {
+            throw new IllegalArgumentException("Mã thành viên không đúng định dạng " + PREFIX + "xxx: " + parts[1]);
         }
 
         GuestMember guestMember = new GuestMember(

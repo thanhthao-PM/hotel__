@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.model.enums.Role;
+import hotel.util.CheckingExpression;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Scanner;
@@ -18,6 +19,17 @@ public class StayMenu {
     private final Role role;
 
     public StayMenu(Scanner in, StayManager manager, String employeeId, Role role) {
+        // chặn null ngay khi tạo menu, tránh NullPointerException lúc đang chạy
+        if (in == null || manager == null) {
+            throw new IllegalArgumentException("Scanner và StayManager không được null");
+        }
+        // phải biết ai đang đăng nhập để ghi nhận "ai thực hiện"
+        CheckingExpression.checkNotNullOrEmpty(employeeId, "Mã nhân viên đăng nhập không được để trống");
+        // role null sẽ làm các kiểm tra phân quyền (role != Role.EMPLOYEE...) sai
+        if (role == null) {
+            throw new IllegalArgumentException("Quyền (Role) của người đăng nhập không được null");
+        }
+
         this.in = in;
         this.manager = manager;
         this.employeeId = employeeId;
@@ -86,6 +98,8 @@ public class StayMenu {
         String stayId = readLine("Mã lượt ở: ");
         String serviceId = readLine("Mã dịch vụ: ");
         double qty = readDouble("Số lượng: ");
+        // báo lỗi số lượng sớm, trước khi gọi manager (manager vẫn kiểm tra lại)
+        CheckingExpression.checkPositiveDouble(qty, "Số lượng phải > 0");
         ServiceUsage u = manager.addServiceUsage(stayId, serviceId, qty, employeeId);
         System.out.println("Đã ghi: " + u);
     }
@@ -97,7 +111,11 @@ public class StayMenu {
         System.out.println("1. Sửa số lượng   2. Hủy dòng   0. Bỏ qua");
         int c = readInt("Chọn: ");
         if (c == 1) {
-            manager.updateServiceUsage(stayId, usageId, readDouble("Số lượng mới: "));
+            // đổi manager.updateServiceUsage(stayId, usageId, readDouble("Số lượng mới: "));
+            double newQty = readDouble("Số lượng mới: ");
+            // báo lỗi số lượng mới sớm, trước khi gọi manager
+            CheckingExpression.checkPositiveDouble(newQty, "Số lượng mới phải > 0");
+            manager.updateServiceUsage(stayId, usageId, newQty);
             System.out.println("Đã sửa.");
         } else if (c == 2) {
             if (!confirm("Hủy dòng " + usageId + "?")) return;

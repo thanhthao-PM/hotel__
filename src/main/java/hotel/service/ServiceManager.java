@@ -3,6 +3,7 @@ package hotel.service;
 import hotel.model.FoodService;
 import hotel.model.HotelService;
 import hotel.model.LaundryService;
+import hotel.util.CheckingExpression;
 import hotel.model.SpaService;
 import hotel.storage.IFileHandler;
 import hotel.util.FileUtil;

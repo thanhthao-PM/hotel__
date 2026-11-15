@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.time.LocalDateTime;
+import hotel.util.CheckingExpression;  
 
 /**
  * Một dòng dịch vụ khách dùng trong một lượt ở. Không tính vào các class chính.
@@ -28,6 +29,19 @@ public class ServiceUsage {
     /** Constructor đầy đủ, dùng khi nạp từ file. */
     public ServiceUsage(String usageId, String stayId, String serviceId, double quantity,
                         double unitPriceAtUse, LocalDateTime usedAt, String recordedBy, boolean cancelled) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(usageId, "Mã lượt dùng dịch vụ không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lượt ở không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(serviceId, "Mã dịch vụ không được để trống");
+        if (!isValidQuantity(quantity)) {
+            throw new IllegalArgumentException("Số lượng phải là số dương");
+        }
+        CheckingExpression.checkNonNegativeDouble(unitPriceAtUse, "Giá tại thời điểm dùng không được âm");
+        if (usedAt == null) {
+            throw new IllegalArgumentException("Thời điểm dùng dịch vụ không được null");
+        }
+        CheckingExpression.checkNotNullOrEmpty(recordedBy, "Mã nhân viên ghi nhận không được để trống");
+
         this.usageId = usageId;
         this.stayId = stayId;
         this.serviceId = serviceId;

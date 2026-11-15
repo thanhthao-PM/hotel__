@@ -1,0 +1,15 @@
+# ============================================================
+# FILE: refunds.txt  -  HOÀN TIỀN (class RefundRecord)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: RF001, RF002...
+# Ngày giờ: yyyy-MM-ddTHH:mm | Tiền: số nguyên VNĐ
+#
+# Cột: refundId|invoiceId|amount|reason|refundedAt|approvedBy
+#   invoiceId: mã IV... trong invoices.txt
+#   approvedBy: mã EM... của Manager duyệt
+#   Số tiền hoàn không vượt quá tổng đã thanh toán
+# Hoàn cọc khi hủy phiếu trước ngày đến không đi qua file này, chỉ đổi status trong deposits.txt
+# ============================================================
+
+RF001|IV005|130000|Hoàn phần cọc dư do trả phòng sớm|2026-10-21T10:45|EM002

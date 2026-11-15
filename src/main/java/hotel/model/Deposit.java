@@ -2,6 +2,7 @@ package hotel.model;
 
 import hotel.model.enums.DepositStatus;
 import hotel.model.enums.PaymentMethod;
+import hotel.util.CheckingExpression; 
 import java.time.LocalDateTime;
 
 public class Deposit {
@@ -17,6 +18,16 @@ public class Deposit {
 
     public Deposit(String depositId, String requestId, double amount, PaymentMethod method, 
                    String receivedBy, String referenceNo) {
+        // THÊM: kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(depositId, "Mã tiền cọc không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(requestId, "Mã phiếu yêu cầu không được để trống");
+        CheckingExpression.checkPositiveDouble(amount, "Số tiền cọc phải > 0");
+        if (method == null) {
+            throw new IllegalArgumentException("Phương thức thanh toán không được null");
+        }
+        CheckingExpression.checkNotNullOrEmpty(receivedBy, "Mã nhân viên thu cọc không được để trống");
+
+
         this.depositId = depositId;
         this.requestId = requestId;
         this.amount = amount;
@@ -28,6 +39,8 @@ public class Deposit {
     }
 
     public void markApplied(String bookingId) {
+        // phải có mã Booking để gán
+        CheckingExpression.checkNotNullOrEmpty(bookingId, "Mã đặt phòng không được để trống");
         this.bookingId = bookingId;
         this.status = DepositStatus.APPLIED;
     }

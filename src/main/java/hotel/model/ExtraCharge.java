@@ -11,6 +11,13 @@ public class ExtraCharge implements Invoice.InvoiceAdjustment {
 
     // Constructor
     public ExtraCharge(String chargeId, String invoiceId, String reason, double amount, String createdBy) {
+        //kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(chargeId, "Mã phụ thu không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do phụ thu không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(createdBy, "Mã nhân viên lập phụ thu không được để trống");
+
+        
         this.chargeId = chargeId;
         this.invoiceId = invoiceId;
         this.reason = reason;

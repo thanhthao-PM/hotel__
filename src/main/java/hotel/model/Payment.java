@@ -14,6 +14,14 @@ public class Payment {
     private String referenceNo; // Mã giao dịch ngân hàng (nếu có)
 
     public Payment(String paymentId, String invoiceId, double amount, Invoice.PaymentMethod method, String receivedBy, String referenceNo) {
+        //kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(paymentId, "Mã thanh toán không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được để trống");
+        if (method == null) {
+            throw new IllegalArgumentException("Phương thức thanh toán không được null");
+        }
+        CheckingExpression.checkNotNullOrEmpty(receivedBy, "Mã nhân viên thu tiền không được để trống");
+        
         this.paymentId = paymentId;
         this.invoiceId = invoiceId;
         setAmount(amount);

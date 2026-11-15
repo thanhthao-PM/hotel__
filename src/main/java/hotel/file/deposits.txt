@@ -1,0 +1,31 @@
+# ============================================================
+# FILE: deposits.txt  -  TIỀN CỌC (class Deposit)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: DP001, DP002...
+# Ngày giờ: yyyy-MM-ddTHH:mm | Tiền: số nguyên VNĐ
+#
+# Cột: depositId|requestId|bookingId|amount|method|paidAt|receivedBy|referenceNo|status
+#   requestId: mã RQ... (rỗng nếu đặt trực tiếp)
+#   bookingId: mã BK... (rỗng nếu phiếu yêu cầu chưa được lập Booking)
+#   Ít nhất một trong requestId hoặc bookingId phải có giá trị
+#   method: CASH, CARD, TRANSFER
+#   receivedBy: mã EM... | referenceNo: số giao dịch (có thể rỗng)
+#   status: HELD (đang giữ), APPLIED (đã trừ vào hóa đơn), REFUNDED (đã hoàn), FORFEITED (mất cọc)
+# Một phiếu yêu cầu có thể có nhiều đợt cọc
+# ============================================================
+
+DP001|RQ001|BK001|450000|CASH|2026-11-08T10:15|EM003||HELD
+DP002|RQ002|BK002|300000|TRANSFER|2026-11-03T09:30|EM004|FT26110301|APPLIED
+DP003|RQ003|BK003|900000|TRANSFER|2026-11-05T11:00|EM003|FT26110502|APPLIED
+DP004|RQ004||330000|CARD|2026-11-09T14:20|EM005|CD26110901|REFUNDED
+DP005|RQ007||390000|CARD|2026-11-11T10:40|EM004|CD26111101|HELD
+DP006|RQ008||300000|CASH|2026-10-29T15:00|EM003||FORFEITED
+DP007||BK004|495000|CASH|2026-11-11T11:25|EM005||HELD
+DP008|RQ009|BK005|390000|TRANSFER|2026-11-09T16:45|EM004|FT26110903|HELD
+DP009||BK006|420000|CASH|2026-11-12T10:00|EM003||HELD
+DP010|RQ006||500000|TRANSFER|2026-11-12T09:30|EM005|FT26111204|HELD
+DP011||BK007|1125000|CASH|2026-11-02T14:00|EM004||APPLIED
+DP012||BK008|780000|CASH|2026-10-20T13:45|EM003||APPLIED
+DP013||BK009|1560000|CARD|2026-10-26T13:55|EM005|CD26102601|APPLIED
+DP014||BK010|330000|CASH|2026-10-28T13:25|EM004||APPLIED

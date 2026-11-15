@@ -1,0 +1,24 @@
+# ============================================================
+# FILE: accounts.txt  -  TÀI KHOẢN ĐĂNG NHẬP (class Account)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: AC001, AC002...
+# Ngày giờ: yyyy-MM-ddTHH:mm
+#
+# Cột: id|username|passwordHash|role|employeeId|locked|failedAttempts|lastLogin
+#   role: ADMIN, MANAGER, EMPLOYEE
+#   employeeId: mã EM... trong employees.txt (mỗi tài khoản thuộc một nhân viên)
+#   passwordHash: chuỗi băm mẫu, không phải mật khẩu thật
+#   locked=true: tài khoản đang bị khóa
+# ============================================================
+
+AC001|admin|8c6976e5b5410415|ADMIN|EM001|false|0|2026-11-12T08:00
+AC002|quanly|a665a45920422f9d|MANAGER|EM002|false|0|2026-11-12T08:10
+AC003|letan1|5e884898da280471|EMPLOYEE|EM003|false|0|2026-11-12T07:55
+AC004|letan2|ef92b778bafe771e|EMPLOYEE|EM004|false|0|2026-11-11T13:50
+AC005|letan3|6b86b273ff34fce1|EMPLOYEE|EM005|false|1|2026-11-12T07:58
+AC006|buongphong1|d4735e3a265e16ee|EMPLOYEE|EM006|false|0|2026-11-10T06:30
+AC007|buongphong2|4e07408562bedb8b|EMPLOYEE|EM007|false|0|2026-11-09T06:35
+AC008|baove1|4b227777d4dd1fc6|EMPLOYEE|EM008|false|0|2026-11-05T17:45
+AC009|ketoan1|ef2d127de37b942b|MANAGER|EM009|false|0|2026-11-11T09:00
+AC010|letan4|e7f6c011776e8db7|EMPLOYEE|EM010|true|3|2026-09-30T10:20

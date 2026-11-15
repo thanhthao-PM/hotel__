@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.model.enums.StayStatus;
+import hotel.util.CheckingExpression;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,6 +42,24 @@ public class StayRecord {
     /** Constructor đầy đủ, dùng khi nạp file. */
     public StayRecord(String stayId, String bookingId, String bookingDetailId, String roomId,
                       LocalDateTime actualCheckIn, LocalDateTime actualCheckOut, StayStatus status) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lượt ở không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(bookingId, "Mã đặt phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(bookingDetailId, "Mã dòng đặt phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        if (status == null) {
+            throw new IllegalArgumentException("Trạng thái lượt ở không được null");
+        }
+        // giờ trả (nếu có) không được trước giờ nhận
+        if (actualCheckOut != null) {
+            if (actualCheckIn == null) {
+                throw new IllegalArgumentException("Có giờ trả nhưng chưa có giờ nhận");
+            }
+            if (actualCheckOut.isBefore(actualCheckIn)) {
+                throw new IllegalArgumentException("Giờ trả trước giờ nhận");
+            }
+        }
+        
         this.stayId = stayId;
         this.bookingId = bookingId;
         this.bookingDetailId = bookingDetailId;
@@ -68,6 +87,10 @@ public class StayRecord {
 
     /** Làm tròn lên theo giờ; to không sau from thì 0. */
     public static int ceilHours(LocalDateTime from, LocalDateTime to) {
+        // chặn null, tránh NullPointerException ở to.isAfter(from)
+        if (from == null || to == null) {
+            throw new IllegalArgumentException("Mốc thời gian không được null");
+        }
         if (!to.isAfter(from)) return 0;
         long minutes = Duration.between(from, to).toMinutes();
         if (minutes == 0) return 1; // lệch dưới 1 phút nhưng vẫn muộn
@@ -84,6 +107,8 @@ public class StayRecord {
     public void checkIn() { checkIn(LocalDateTime.now()); }
 
     public void checkIn(LocalDateTime when) {
+        // giờ nhận không được null
+        if (when == null) throw new IllegalArgumentException("Giờ nhận phòng không được null");
         if (actualCheckIn != null) throw new IllegalStateException("Lượt ở " + stayId + " đã nhận phòng");
         if (guestCount == 0) throw new IllegalStateException("Chưa có khách nào trong lượt ở " + stayId);
         this.actualCheckIn = when;
@@ -102,6 +127,8 @@ public class StayRecord {
     }
 
     private void close(LocalDateTime when, StayStatus newStatus) {
+        // giờ trả không được null (trước đó when.isBefore(...) sẽ ném NullPointerException)
+        if (when == null) throw new IllegalArgumentException("Giờ trả phòng không được null");
         if (status != StayStatus.ACTIVE) throw new IllegalStateException("Lượt ở " + stayId + " không còn ở trạng thái ACTIVE");
         if (actualCheckIn == null) throw new IllegalStateException("Lượt ở " + stayId + " chưa nhận phòng");
         if (when.isBefore(actualCheckIn)) throw new IllegalArgumentException("Giờ trả trước giờ nhận");
@@ -133,6 +160,8 @@ public class StayRecord {
 
     public long calculateNights(LocalDateTime until) {
         if (actualCheckIn == null) return 0;
+        // until null sẽ gây NullPointerException ở until.toLocalDate()
+        if (until == null) throw new IllegalArgumentException("Mốc thời gian tính số đêm không được null");
         long days = ChronoUnit.DAYS.between(actualCheckIn.toLocalDate(), until.toLocalDate());
         return Math.max(1, days);
     }
@@ -210,6 +239,8 @@ public class StayRecord {
     }
 
     public static StayRecord fromFileLine(String line) {
+        // dòng file không được null hoặc rỗng
+        CheckingExpression.checkNotNullOrEmpty(line, "Dòng dữ liệu StayRecord không được để trống");
         String[] f = line.split("\\|", -1);
         if (f.length != 7) throw new IllegalArgumentException("Sai số trường (cần 7, có " + f.length + ")");
         for (int i = 0; i < 4; i++) if (f[i].isEmpty()) throw new IllegalArgumentException("Thiếu mã ở trường " + (i + 1));

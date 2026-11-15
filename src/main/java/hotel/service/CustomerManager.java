@@ -68,8 +68,23 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
     @Override
     public boolean update(Person p) {
         if (p == null) return false;
+        // chặn Employee lọt vào qua update (giống insert)
+        if (!(p instanceof Customer) && !(p instanceof GuestMember)) return false;
         for (int i = 0; i < count; i++) {
             if (items[i].getId().equals(p.getId())) {
+                // duyệt mọi người khác (bỏ qua vị trí i) để kiểm tra trùng CCCD và SĐT
+                for (int j = 0; j < count; j++) {
+                    if (j == i) continue;
+                    String idNum = p.getIdentityNumber();
+                    if (idNum != null && !idNum.isEmpty() && idNum.equals(items[j].getIdentityNumber())) {
+                        return false;
+                    }
+                    // SĐT chỉ cần khác nhau giữa các Customer
+                    if (p instanceof Customer && items[j] instanceof Customer
+                            && p.getPhone().equals(items[j].getPhone())) {
+                        return false;
+                    }
+                }
                 items[i] = p;
                 return true;
             }

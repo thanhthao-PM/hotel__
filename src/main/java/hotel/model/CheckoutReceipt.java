@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.time.LocalDateTime;
+import hotel.util.CheckingExpression;    
 
 /**
  * Phiếu trả phòng. lateHours dùng để P5 tính ExtraCharge.
@@ -28,6 +29,15 @@ public class CheckOutReceipt {
     /** lateHours âm nghĩa là tự tính từ checkOutTime và dueCheckOut. */
     public CheckOutReceipt(String receiptId, String stayId, LocalDateTime checkOutTime, String roomCondition,
                            LocalDateTime dueCheckOut, int lateHours, String handledBy, String note) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(receiptId, "Mã phiếu trả phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lượt ở không được để trống");
+        if (checkOutTime == null) {
+            throw new IllegalArgumentException("Giờ trả phòng không được null");
+        }
+        CheckingExpression.checkNotNullOrEmpty(handledBy, "Mã nhân viên xử lý không được để trống");
+
+
         this.receiptId = receiptId;
         this.stayId = stayId;
         this.checkOutTime = checkOutTime;

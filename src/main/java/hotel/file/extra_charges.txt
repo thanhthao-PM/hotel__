@@ -1,0 +1,17 @@
+# ============================================================
+# FILE: extra_charges.txt  -  PHỤ THU HÓA ĐƠN (class ExtraCharge, cài interface InvoiceAdjustment)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: EC001, EC002...
+# Tiền: số nguyên VNĐ
+#
+# Cột: chargeId|invoiceId|reason|amount|createdBy
+#   invoiceId: mã IV... trong invoices.txt
+#   reason: lý do phụ thu (trả phòng muộn, hư hỏng...)
+#   createdBy: mã EM... của nhân viên ghi phụ thu
+# Phụ thu làm TĂNG tổng hóa đơn (getAdjustmentAmount trả số dương)
+# Phụ thu trả muộn lấy từ lateHours trong checkout_receipts.txt
+# ============================================================
+
+EC001|IV001|Trả phòng muộn 2 giờ|100000|EM004
+EC002|IV003|Hư hỏng khăn tắm|150000|EM005

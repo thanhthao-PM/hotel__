@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import hotel.util.CheckingExpression;
 import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -95,6 +96,9 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     }
 
     public Account login(String username, String rawPassword) {
+        // tên đăng nhập hoặc mật khẩu rỗng thì báo cùng thông báo chung, không lộ thông tin
+        CheckingExpression.checkNotNullOrEmpty(username, "Sai tên đăng nhập hoặc mật khẩu.");
+        CheckingExpression.checkNotNullOrEmpty(rawPassword, "Sai tên đăng nhập hoặc mật khẩu.");
         Account acc = findById(username);
         // Cùng một thông báo cho "sai tên" và "sai mật khẩu" để không lộ username nào tồn tại
         if (acc == null) throw new IllegalArgumentException("Sai tên đăng nhập hoặc mật khẩu.");

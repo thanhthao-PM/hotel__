@@ -5,6 +5,7 @@ import hotel.model.RoomMaintenance;
 import hotel.model.StandardRoom;
 import hotel.model.VIPRoom;
 import hotel.model.enums.RoomStatus;
+import hotel.util.CheckingExpression;
 import hotel.storage.IFileHandler;
 import hotel.util.FileUtil;
 import hotel.util.Validator;
@@ -151,6 +152,8 @@ public class RoomManager implements IManager<Room>, IFileHandler {
 
     // Tìm theo loại phòng: "VIP" hoặc "STANDARD"
     public ArrayList<Room> findByType(String type) {
+        // type null sẽ gây NullPointerException ở type.equalsIgnoreCase(...)
+        CheckingExpression.checkNotNullOrEmpty(type, "Loại phòng không được để trống (VIP hoặc STANDARD)");
         ArrayList<Room> result = new ArrayList<>();
         for (Room r : rooms) {
             boolean isVip = r instanceof VIPRoom;
@@ -175,6 +178,11 @@ public class RoomManager implements IManager<Room>, IFileHandler {
 
     // Tìm theo khoảng giá gốc một đêm [minPrice, maxPrice]
     public ArrayList<Room> findByPriceRange(double minPrice, double maxPrice) {
+        // giá không âm và giá tối thiểu không lớn hơn giá tối đa
+        CheckingExpression.checkNonNegativeDouble(minPrice, "Giá tối thiểu không được âm");
+        if (maxPrice < minPrice) {
+            throw new IllegalArgumentException("Giá tối đa không được nhỏ hơn giá tối thiểu");
+        }
         ArrayList<Room> result = new ArrayList<>();
         for (Room r : rooms) {
             if (r.getBasePrice() >= minPrice && r.getBasePrice() <= maxPrice) {
@@ -312,6 +320,8 @@ public class RoomManager implements IManager<Room>, IFileHandler {
 
     // Kiểm tra phòng có bảo trì (chưa đóng) giao với khoảng ngày [from, to)
     public boolean hasMaintenanceInRange(String roomId, LocalDate from, LocalDate to) {
+        // chặn null và khoảng ngày sai (trước đó from/to null gây NullPointerException ở isBefore)
+        CheckingExpression.checkValidDateRange(from, to);
         for (RoomMaintenance m : maintenances) {
             if (m.getRoomId().equalsIgnoreCase(roomId) && !m.isClosed()
                     && m.getStartDate().isBefore(to) && !m.getEndDate().isBefore(from)) {

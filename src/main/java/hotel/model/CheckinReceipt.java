@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.time.LocalDateTime;
+import hotel.util.CheckingExpression; 
 
 /**
  * Phiếu nhận phòng. earlyHours là thuộc tính BỔ SUNG so với kế hoạch: số giờ nhận sớm
@@ -25,6 +26,17 @@ public class CheckInReceipt {
 
     public CheckInReceipt(String receiptId, String stayId, LocalDateTime checkInTime, int guestCount,
                           int earlyHours, String handledBy, String note) {
+        //  kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(receiptId, "Mã phiếu nhận phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lượt ở không được để trống");
+        if (checkInTime == null) {
+            throw new IllegalArgumentException("Giờ nhận phòng không được null");
+        }
+        CheckingExpression.checkPositiveInt(guestCount, "Số khách phải > 0");
+        CheckingExpression.checkNonNegativeInt(earlyHours, "Số giờ nhận sớm không được âm");
+        CheckingExpression.checkNotNullOrEmpty(handledBy, "Mã nhân viên xử lý không được để trống");
+
+        
         this.receiptId = receiptId;
         this.stayId = stayId;
         this.checkInTime = checkInTime;

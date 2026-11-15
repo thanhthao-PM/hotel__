@@ -1,0 +1,24 @@
+# ============================================================
+# FILE: guest_members.txt  -  THÀNH VIÊN ĐOÀN (class GuestMember)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: GM001, GM002...
+# Ngày: yyyy-MM-dd
+#
+# Cột: id|fullName|phone|gender|representativeId|relationship|identityNumber|dateOfBirth
+#   representativeId: mã CU... của khách đại diện (trong customers.txt)
+#   relationship: quan hệ với người đại diện
+#   Trẻ em chưa có giấy tờ thì để trống phone và identityNumber
+# Đoàn nào gồm những thành viên nào được ghi trong bookings.txt (dòng GRP, trường memberIds)
+# ============================================================
+
+GM001|Lê Thị Mai|0933000001|FEMALE|CU003|Vợ|048087002001|1987-02-14
+GM002|Lê Quốc Huy||MALE|CU003|Con||2012-09-01
+GM003|Nguyễn Văn Sơn|0933000003|MALE|CU003|Bạn|048084002003|1984-06-18
+GM004|Trần Minh Tuấn|0933000004|MALE|CU005|Đồng nghiệp|079090002004|1990-10-10
+GM005|Vũ Thị Lan|0933000005|FEMALE|CU005|Chị gái|079084002005|1984-03-28
+GM006|Phạm Văn Đức|0933000006|MALE|CU004|Chồng|001094002006|1994-05-05
+GM007|Trịnh Thị Thu|0933000007|FEMALE|CU009|Vợ|079088002007|1988-11-11
+GM008|Trịnh Gia Bảo||MALE|CU009|Con||2016-04-02
+GM009|Đinh Văn Hùng|0933000009|MALE|CU006|Anh trai|092089002009|1989-02-20
+GM010|Nguyễn Thị Kim|0933000010|FEMALE|CU008|Mẹ|079068002010|1968-08-08

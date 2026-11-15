@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
+import hotel.util.CheckingExpression;
 
 /**
  * Quản lý lượt ở (StayRecord), phiếu nhận, phiếu trả, khách lưu trú và dịch vụ sử dụng (P4).
@@ -69,6 +70,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
         this.persons = Objects.requireNonNull(persons);
         this.bookings = Objects.requireNonNull(bookings);
         this.invoices = Objects.requireNonNull(invoices);
+        // thư mục dữ liệu không được null hoặc rỗng
+        CheckingExpression.checkNotNullOrEmpty(dataDir, "Thư mục dữ liệu không được để trống");
         this.dataDir = dataDir;
         this.clock = Objects.requireNonNull(clock);
     }
@@ -103,6 +106,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
                               String employeeId, String note) {
         requireText(employeeId, "Thiếu mã nhân viên thực hiện");
         requireText(code, "Thiếu mã phiếu yêu cầu hoặc mã đặt phòng");
+        // mã dòng đặt phòng không được rỗng
+        requireText(bookingDetailId, "Thiếu mã dòng đặt phòng");
         if (guestIds == null || guestIds.length == 0) throw new IllegalArgumentException("Phải có ít nhất 1 khách");
 
         StayLinks.BookingLine line = findLine(code, bookingDetailId);
@@ -211,6 +216,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
         StayRecord stay = requireActive(stayId);
         StayLinks.BookingLine line = bookings.getLine(stay.getBookingDetailId());
         if (line == null) throw new IllegalStateException("Không tìm thấy BookingDetail " + stay.getBookingDetailId());
+        // chặn null và bắt ngày trả mới phải sau ngày trả hiện tại
+        CheckingExpression.checkValidDateRange(line.checkOutDate, newCheckOutDate);
         if (!newCheckOutDate.isAfter(line.checkOutDate)) throw new IllegalArgumentException("Ngày trả mới phải sau ngày trả hiện tại (" + line.checkOutDate + ")");
         return bookings.extendLine(stay.getBookingDetailId(), newCheckOutDate);
     }
@@ -218,6 +225,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
     /** Khách không đến: quá giờ quy định thì chuyển phiếu NO_SHOW (P3 xử lý Deposit) và trả phòng về trống. */
     public void processNoShow(String code, String employeeId) {
         requireText(employeeId, "Thiếu mã nhân viên thực hiện");
+        // mã phiếu không được rỗng
+        requireText(code, "Thiếu mã phiếu yêu cầu hoặc mã đặt phòng");
         StayLinks.BookingLine[] lines = bookings.getLines(code);
         if (lines == null || lines.length == 0) throw new IllegalArgumentException("Không tìm thấy phiếu " + code);
         LocalDate earliest = lines[0].checkInDate;
@@ -245,6 +254,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
     public ServiceUsage addServiceUsage(String stayId, String serviceId, double quantity, String employeeId) {
         requireText(employeeId, "Thiếu mã nhân viên thực hiện");
         StayRecord stay = requireActive(stayId);
+        // mã dịch vụ không được rỗng
+        requireText(serviceId, "Thiếu mã dịch vụ");
         if (!ServiceUsage.isValidQuantity(quantity)) throw new IllegalArgumentException("Số lượng phải là số dương");
         if (!services.isAvailable(serviceId)) throw new IllegalArgumentException("Dịch vụ " + serviceId + " không tồn tại hoặc đã ngưng cung cấp");
         ServiceUsage u = new ServiceUsage(stayId, serviceId, quantity, services.getCurrentUnitPrice(serviceId), now(), employeeId);
@@ -254,6 +265,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
 
     /** Sửa số lượng: chỉ khi lượt ở còn ACTIVE, dòng chưa hủy và chưa có hóa đơn. */
     public void updateServiceUsage(String stayId, String usageId, double newQuantity) {
+        // mã dòng dịch vụ không được rỗng
+        requireText(usageId, "Thiếu mã dòng dịch vụ");
         StayRecord stay = requireActive(stayId);
         ServiceUsage u = requireUsage(stay, usageId);
         if (u.isCancelled()) throw new IllegalStateException("Dòng dịch vụ đã hủy");
@@ -267,6 +280,10 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
      * @return true nếu hóa đơn đã tồn tại và P5 cần điều chỉnh
      */
     public boolean cancelServiceUsage(String stayId, String usageId, Role role) {
+        // mã dòng dịch vụ không được rỗng
+        requireText(usageId, "Thiếu mã dòng dịch vụ");
+        // role null sẽ làm điều kiện phân quyền bên dưới sai, ai cũng hủy được
+        if (role == null) throw new IllegalArgumentException("Thiếu quyền (Role) của người thực hiện");
         StayRecord stay = requireStay(stayId);
         ServiceUsage u = requireUsage(stay, usageId);
         if (u.isCancelled()) throw new IllegalStateException("Dòng dịch vụ đã hủy rồi");
@@ -727,7 +744,8 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
     }
 
     private static void requireText(String s, String message) {
-        if (s == null || s.trim().isEmpty()) throw new IllegalArgumentException(message);
+        // đổi if (s == null || s.trim().isEmpty()) throw new IllegalArgumentException(message);
+        CheckingExpression.checkNotNullOrEmpty(s, message);
     }
 }
 

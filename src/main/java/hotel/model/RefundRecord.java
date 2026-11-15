@@ -13,6 +13,12 @@ public class RefundRecord {
     private String approvedBy;
 
     public RefundRecord(String refundId, String invoiceId, double amount, String reason, String approvedBy) {
+        //kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(refundId, "Mã hoàn tiền không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do hoàn tiền không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(approvedBy, "Hoàn tiền phải có mã quản lý duyệt");
+
         this.refundId = refundId;
         this.invoiceId = invoiceId;
         setAmount(amount);

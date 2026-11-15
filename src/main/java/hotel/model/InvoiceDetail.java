@@ -18,6 +18,11 @@ public class InvoiceDetail {
     // Constructor
     public InvoiceDetail(String detailId, String invoiceId, Invoice.LineType lineType, String description, 
                          String roomId, String serviceId, String usageId, double quantity, double unitPrice) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(detailId, "Mã dòng hóa đơn không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(description, "Mô tả dòng hóa đơn không được để trống");
+
         this.detailId = detailId;
         this.invoiceId = invoiceId;
         this.description = description;
@@ -27,10 +32,23 @@ public class InvoiceDetail {
         setLineData(lineType, roomId, serviceId);
         setUnitPrice(unitPrice);
         setQuantity(quantity);
+
+        //dòng dịch vụ phải có usageId, dòng tiền phòng thì usageId phải rỗng (theo kế hoạch)
+        boolean hasUsage = usageId != null && !usageId.trim().isEmpty();
+        if (lineType == Invoice.LineType.SERVICE && !hasUsage) {
+            throw new IllegalArgumentException("Dòng dịch vụ phải có mã lượt dùng dịch vụ (usageId)");
+        }
+        if (lineType == Invoice.LineType.ROOM && hasUsage) {
+            throw new IllegalArgumentException("Dòng tiền phòng không được có mã lượt dùng dịch vụ (usageId)");
+        }
     }
 
     // Hàm gán loại dòng và kiểm tra logic chéo
     public void setLineData(Invoice.LineType lineType, String roomId, String serviceId) {
+        // chặn null trước khi gọi lineType.name(), tránh NullPointerException
+        if (lineType == null) {
+            throw new IllegalArgumentException("Loại dòng hóa đơn không được null");
+        }
         // [LOGIC NGHIỆP VỤ]: Nếu là dòng tính tiền phòng thì chỉ được có mã Phòng (roomId), không được có mã Dịch vụ. Và ngược lại.
         // Hàm này gọi file kiểm tra của nhóm để bắt lỗi nếu truyền sai.
         CheckingExpression.checkMutuallyExclusiveIds(

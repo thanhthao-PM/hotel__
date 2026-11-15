@@ -1,0 +1,29 @@
+# ============================================================
+# FILE: invoices.txt  -  HÓA ĐƠN, MỖI LƯỢT Ở MỘT HÓA ĐƠN (class Invoice)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: IV001, IV002...
+# Ngày giờ: yyyy-MM-ddTHH:mm | Tiền: số nguyên VNĐ
+#
+# Cột: invoiceId|stayId|issuedAt|issuedBy|status|depositApplied
+#   stayId: mã ST... trong stays.txt
+#   issuedBy: mã EM...
+#   status: OPEN, PARTIALLY_PAID, PAID, CANCELLED
+#   depositApplied: tiền cọc trừ vào hóa đơn = depositShare của phòng (booking_details.txt)
+#
+# Công thức dùng cho dữ liệu mẫu:
+#   Tổng = tiền phòng + tiền dịch vụ + phụ thu - giảm giá
+#   Giảm giá PERCENT tính trên (tiền phòng + dịch vụ + phụ thu)
+#   Phải thu = Tổng - depositApplied (nếu âm thì lập hoàn tiền trong refunds.txt)
+#
+# Các dòng chi tiết nằm trong invoice_details.txt, thanh toán trong payments.txt,
+# giảm giá trong discounts.txt, phụ thu trong extra_charges.txt
+# ============================================================
+
+IV001|ST002|2026-11-07T14:05|EM004|PAID|300000
+IV002|ST003|2026-11-10T11:40|EM005|PAID|480000
+IV003|ST004|2026-11-10T11:55|EM005|PARTIALLY_PAID|420000
+IV004|ST007|2026-11-04T11:05|EM004|PAID|1125000
+IV005|ST008|2026-10-21T10:35|EM004|PAID|780000
+IV006|ST009|2026-10-28T10:50|EM005|PAID|1560000
+IV007|ST010|2026-10-30T11:05|EM004|PAID|330000
