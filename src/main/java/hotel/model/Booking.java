@@ -50,4 +50,18 @@ public abstract class Booking {
     public LocalDate getCheckInDate() { return checkInDate; }
     public LocalDate getExpectedCheckOutDate() { return expectedCheckOutDate; }
     public BookingStatus getStatus() { return status; }
+    public String getCreatedBy() { return createdBy; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getNote() { return note; }
+
+    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
+    public void setRequestID(String requestId) { this.requestId = requestId; }
+    public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    public void setExpectedCheckOutDate(LocalDate expectedCheckOutDate) { this.expectedCheckOutDate = expectedCheckOutDate; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public void setNote(String note) { this.note = note; }
 }

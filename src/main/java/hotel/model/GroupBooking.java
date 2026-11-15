@@ -27,7 +27,12 @@ public class GroupBooking extends Booking {
 
     public String getGroupName() { return groupName; }
     public String[] getRoomIds() { return roomIds; }
+    public void setGroupName(String groupName) { this.groupName = groupName; }
+    public void setRoomIds(String[] roomIds) { this.roomIds = roomIds; }
+    public Room[] getRoomObjs() { return roomObjs;}
     public void setRoomObjs(Room[] roomObjs) { this.roomObjs = roomObjs; }
     public GuestMember[] getMembers() { return members; }
+    public void setMembers(GuestMember[] members) { this.members = members; }
     public int getMemberCount() { return memberCount; }
+    public void setMemberCount(int memberCount) { this.memberCount = memberCount; }
 }

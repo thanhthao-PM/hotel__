@@ -71,13 +71,12 @@ public class BookingRequest {
                this.requestStatus == RequestStatus.CONFIRMED;
     }
 
-    // --- BỔ SUNG CÁC GETTER BỊ THIẾU ĐỂ HẾT LỖI TRONG BOOKINGMANAGER ---
     public String getRequestId() { return requestId; }
     public String getCustomerId() { return customerId; }
-    public String getBookingType() { return bookingType; }               // Sửa lỗi getBookingType()
-    public String getGroupName() { return groupName; }                   // Sửa lỗi getGroupName()
-    public LocalDate getExpectedCheckInDate() { return expectedCheckInDate; } // Sửa lỗi getExpectedCheckInDate()
-    public LocalDate getExpectedCheckOutDate() { return expectedCheckOutDate; } // Sửa lỗi getExpectedCheckOutDate()
+    public String getBookingType() { return bookingType; }
+    public String getGroupName() { return groupName; }
+    public LocalDate getExpectedCheckInDate() { return expectedCheckInDate; }
+    public LocalDate getExpectedCheckOutDate() { return expectedCheckOutDate; }
     public RequestStatus getRequestStatus() { return requestStatus; }
     public BookingDetail[] getDetails() { return details; }
     public int getDetailCount() { return detailCount; }
@@ -85,4 +84,18 @@ public class BookingRequest {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getDepositDueAt() { return depositDueAt; }
     public String getCancelReason() { return cancelReason; }
+
+    public void setRequestId(String requestId) { this.requestId = requestId; }
+    public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public void setBookingType(String bookingType) { this.bookingType = bookingType; }
+    public void setGroupName(String groupName) { this.groupName = groupName; }
+    public void setExpectedCheckInDate(LocalDate expectedCheckInDate) { this.expectedCheckInDate = expectedCheckInDate; }
+    public void setExpectedCheckOutDate(LocalDate expectedCheckOutDate) { this.expectedCheckOutDate = expectedCheckOutDate; }
+    public void setDepositDueAt(LocalDateTime depositDueAt) { this.depositDueAt = depositDueAt; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    public void setRequestStatus(RequestStatus requestStatus) { this.requestStatus = requestStatus; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setDetails(BookingDetail[] details) { this.details = details; }
+    public void setDetailCount(int detailCount) { this.detailCount = detailCount; }
 }
