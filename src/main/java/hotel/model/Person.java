@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import hotel.model.enums.Gender;
 
 public abstract class Person {
+    // THÊM: ký tự ngăn cách file, dùng để chặn trong dữ liệu nhập
+    private static final String SEP = "|";   
 
     // Các thuộc tính của lớp Person
     private final String id;
@@ -26,6 +28,7 @@ public abstract class Person {
     // Các phương thức setter
     public void setName(String name) {
         CheckingExpression.checkNotNullOrEmpty(name, "Họ và tên không được để trống");
+        checkNoSeparator(name, "Họ và tên");
         this.fullName = name.trim(); //trim() để loại bỏ khoảng trắng ở đầu và cuối chuỗi
     }
 
@@ -50,11 +53,17 @@ public abstract class Person {
         if (dateOfBirth == null) {
             throw new IllegalArgumentException("Ngày sinh không được để trống.");
         }
+        // ngày sinh không được ở tương lai
+        if (dateOfBirth.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Ngày sinh không được ở tương lai.");
+        }
+
         this.dateOfBirth = dateOfBirth;
     }
 
     public void setAddress(String address) {
         CheckingExpression.checkNotNullOrEmpty(address, "Địa chỉ không được để trống");
+        checkNoSeparator(address, "Địa chỉ");
         this.address = address.trim();
     }
 
@@ -74,6 +83,10 @@ public abstract class Person {
     // Constructor
     public Person(String id, String fullName, String phone, Gender gender, String identityNumber,
                   LocalDate dateOfBirth, String address, boolean active, boolean identityRequired) {
+        // mã không được rỗng và không chứa ký tự ngăn cách
+        CheckingExpression.checkNotNullOrEmpty(id, "Mã không được để trống");
+        checkNoSeparator(id, "Mã");
+
         this.id = id;
         this.identityRequired = identityRequired;
         setName(fullName);
@@ -83,6 +96,13 @@ public abstract class Person {
         setDateOfBirth(dateOfBirth);
         setAddress(address);
         this.active = active;
+    }
+
+    //chuỗi nhập vào không được chứa "|" vì sẽ làm hỏng dòng file
+    private static void checkNoSeparator(String value, String fieldName) {
+        if (value.contains(SEP)) {
+            throw new IllegalArgumentException(fieldName + " không được chứa ký tự '" + SEP + "'");
+        }
     }
 
     // Dùng chung

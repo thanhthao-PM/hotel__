@@ -1,5 +1,7 @@
 package hotel.model;
 
+import hotel.util.CheckingExpression;
+
 /**
  * Khách đang ở trong một lượt ở (StayRecord): hoặc là Customer, hoặc là GuestMember.
  * Class này là "KhachLuuTru / StayGuest" trong ERD. Bản kế hoạch mới bị mất class này
@@ -20,6 +22,12 @@ public class StayGuest {
     }
 
     public StayGuest(String id, String stayId, String customerId, String guestMemberId) {
+        // kiểm tra mã bản ghi và mã lượt ở
+        CheckingExpression.checkNotNullOrEmpty(id, "Mã khách lưu trú không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lượt ở không được để trống");
+        // ít nhất một trong hai mã phải có giá trị (còn trường hợp có cả hai thì do đoạn if bên dưới chặn)
+        CheckingExpression.checkAtLeastOneNotNull(customerId, guestMemberId,"Phải có customerId hoặc guestMemberId");
+        
         boolean hasCustomer = customerId != null && !customerId.isEmpty();
         boolean hasMember = guestMemberId != null && !guestMemberId.isEmpty();
         if (hasCustomer == hasMember) {

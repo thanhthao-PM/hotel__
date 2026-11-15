@@ -1,0 +1,1 @@
+EMPLOYEE|NV000|Quản trị hệ thống|0900000000|OTHER|000000000001|1990-01-01|Chưa cập nhật|true|Quản trị viên|0.0|2026-11-14

@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.util.Arrays;
+import hotel.util.CheckingExpression;
 
 /**
  * Manages bookings in a fixed-size array.
@@ -16,6 +17,7 @@ public class BookingList {
     }
 
     public BookingList(int capacity) {
+        CheckingExpression.checkPositiveInt(capacity, "Sức chứa danh sách đặt phòng phải > 0");
         if (capacity <= 0) {
             throw new IllegalArgumentException("Capacity must be greater than zero");
         }
@@ -26,6 +28,7 @@ public class BookingList {
         if (booking == null) {
             throw new IllegalArgumentException("Booking must not be null");
         }
+        CheckingExpression.checkNotNullOrEmpty(booking.getBookingId(), "Mã đặt phòng không được để trống");
         if (size == bookings.length) {
             throw new IllegalStateException("Booking list is full");
         }
@@ -83,6 +86,7 @@ public class BookingList {
     }
 
     private void checkIndex(int index) {
+        CheckingExpression.checkValidArrayIndex(index, size);
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException("Index: " + index + ", size: " + size);
         }

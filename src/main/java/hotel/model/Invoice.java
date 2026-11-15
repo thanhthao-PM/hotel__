@@ -70,6 +70,8 @@ public class Invoice {
     public Invoice(String stayId, String issuedBy, double depositApplied) {
         // Trước khi tạo, ta gọi người bảo vệ (CheckingExpression) ra kiểm tra dữ liệu xem có rỗng không.
         CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lưu trú không được trống"); 
+        //phải biết nhân viên nào lập hóa đơn (đặt trước dòng tăng nextNumber để không nhảy mã khi lỗi)
+        CheckingExpression.checkNotNullOrEmpty(issuedBy, "Mã nhân viên lập hóa đơn không được trống");
         
         this.invoiceId = "INV" + (nextNumber++); // Tự động tạo mã: INV1, INV2...
         this.stayId = stayId;
@@ -145,6 +147,8 @@ public class Invoice {
 
     // Hàm thêm một Lần thanh toán vào mảng
     public void addPayment(Payment payment) {
+        // không cho thêm phiếu thanh toán null
+        checkNotNullObject(payment, "Phiếu thanh toán không được null");
         // Kiểm tra xem kệ (mảng) còn chỗ trống không
         if (paymentCount < payments.length) {
             payments[paymentCount++] = payment; // Đặt phiếu thanh toán vào ngăn trống và tăng biến đếm
@@ -160,16 +164,26 @@ public class Invoice {
 
     // Các hàm thêm khác vào mảng (tương tự addPayment)
     public void addDetail(InvoiceDetail detail) {
+        checkNotNullObject(detail, "Dòng chi tiết hóa đơn không được null");
         if (detailCount < details.length) details[detailCount++] = detail;
     }
     public void addDiscount(Discount discount) {
+        checkNotNullObject(discount, "Giảm giá không được null");
         if (discountCount < discounts.length) discounts[discountCount++] = discount;
     }
     public void addExtraCharge(ExtraCharge charge) {
+        checkNotNullObject(charge, "Phụ thu không được null");
         if (extraChargeCount < extraCharges.length) extraCharges[extraChargeCount++] = charge;
     }
     public void addRefund(RefundRecord refund) {
+        checkNotNullObject(refund, "Phiếu hoàn tiền không được null");
         if (refundCount < refunds.length) refunds[refundCount++] = refund;
+    }
+    // kiểm tra đối tượng khác null (CheckingExpression chưa có hàm này)
+    private static void checkNotNullObject(Object obj, String errorMessage) {
+        if (obj == null) {
+            throw new IllegalArgumentException(errorMessage);
+        }
     }
 
     // Hàm Hủy hóa đơn

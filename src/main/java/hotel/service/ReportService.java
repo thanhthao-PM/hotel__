@@ -8,6 +8,11 @@ public class ReportService {
     private InvoiceManager invoiceManager;
 
     public ReportService(InvoiceManager invoiceManager) {
+        // invoiceManager null sẽ làm mọi hàm thống kê bị NullPointerException
+        if (invoiceManager == null) {
+            throw new IllegalArgumentException("InvoiceManager không được null");
+        }
+
         this.invoiceManager = invoiceManager;
     }
 
@@ -33,6 +38,10 @@ public class ReportService {
 
     // Tính công suất trung bình 
     public void calculateAverageOccupancy(int totalRooms, int days) {
+        // số phòng và số ngày không được âm (checkDivideByZero chỉ chặn đúng bằng 0)
+        CheckingExpression.checkPositiveInt(totalRooms, "Tổng số phòng phải > 0");
+        CheckingExpression.checkPositiveInt(days, "Số ngày phải > 0");
+
         CheckingExpression.checkDivideByZero(totalRooms, "Tổng số phòng không thể bằng 0"); 
         CheckingExpression.checkDivideByZero(days, "Số ngày không thể bằng 0"); 
         // Logic thống kê sẽ phối hợp với StayRecord của P4

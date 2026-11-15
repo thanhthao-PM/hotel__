@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.util.ArrayList;
+import hotel.util.CheckingExpression;          
 import java.util.Collections;
 import java.util.List;
 
@@ -14,10 +15,14 @@ public class BookingRequestList {
         if (bookingRequest == null) {
             throw new IllegalArgumentException("Booking request must not be null");
         }
+        // mã phiếu yêu cầu không được rỗng
+        CheckingExpression.checkNotNullOrEmpty(bookingRequest.getRequestId(), "Mã phiếu yêu cầu không được để trống");
         bookingRequests.add(bookingRequest);
     }
 
     public BookingRequest get(int index) {
+        //chặn truy cập ngoài biên
+        CheckingExpression.checkValidArrayIndex(index, bookingRequests.size());
         return bookingRequests.get(index);
     }
 
@@ -26,6 +31,9 @@ public class BookingRequestList {
     }
 
     public BookingRequest remove(int index) {
+        // chặn truy cập ngoài biên
+        CheckingExpression.checkValidArrayIndex(index, bookingRequests.size());
+
         return bookingRequests.remove(index);
     }
 

@@ -1,6 +1,7 @@
 package hotel.model;
 
 import java.time.LocalDate;
+import hotel.util.CheckingExpression;   
 
 public class IndividualBooking extends Booking {
     private String roomId;
@@ -11,6 +12,10 @@ public class IndividualBooking extends Booking {
                              LocalDate checkInDate, LocalDate expectedCheckOutDate, 
                              String createdBy, String note, String roomId, int numberOfGuests) {
         super(bookingId, requestId, customerId, checkInDate, expectedCheckOutDate, createdBy, note);
+        //kiểm tra phần riêng của đặt phòng cá nhân
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        CheckingExpression.checkPositiveInt(numberOfGuests, "Số khách phải > 0");
+
         this.roomId = roomId;
         this.numberOfGuests = numberOfGuests;
     }
@@ -22,7 +27,10 @@ public class IndividualBooking extends Booking {
     }
 
     public String getRoomId() { return roomId; }
-    public void setRoomId(String roomId) { this.roomId = roomId; }
+    public void setRoomId(String roomId) { 
+        // mã phòng mới không được rỗng
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        this.roomId = roomId; }
     public Room getRoomObj() { return roomObj; }
     public void setRoomObj(Room roomObj) { this.roomObj = roomObj; }
     public int getNumberOfGuests() { return numberOfGuests; }

@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.util.FileUtil;
+import hotel.util.CheckingExpression;   
 
 // Lớp trừu tượng cha của các loại dịch vụ khách sạn
 public abstract class HotelService {
@@ -18,6 +19,12 @@ public abstract class HotelService {
     // Constructor đầy đủ
     public HotelService(String serviceId, String name, double unitPrice,
                         String unit, String description, boolean available) {
+        //kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(serviceId, "Mã dịch vụ không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(name, "Tên dịch vụ không được để trống");
+        CheckingExpression.checkNonNegativeDouble(unitPrice, "Đơn giá dịch vụ không được âm");
+        CheckingExpression.checkNotNullOrEmpty(unit, "Đơn vị tính không được để trống");
+
         this.serviceId = serviceId;
         this.name = name;
         this.unitPrice = unitPrice;
@@ -79,8 +86,14 @@ public abstract class HotelService {
     public boolean isAvailable() { return available; }
 
     // Setter
-    public void setName(String name) { this.name = name; }
-    public void setUnitPrice(double unitPrice) { this.unitPrice = unitPrice; }
-    public void setUnit(String unit) { this.unit = unit; }
+    public void setName(String name) { 
+        CheckingExpression.checkNotNullOrEmpty(name, "Tên dịch vụ không được để trống");
+        this.name = name; }
+    public void setUnitPrice(double unitPrice) { 
+        CheckingExpression.checkNonNegativeDouble(unitPrice, "Đơn giá dịch vụ không được âm");
+        this.unitPrice = unitPrice; }
+    public void setUnit(String unit) { 
+         CheckingExpression.checkNotNullOrEmpty(unit, "Đơn vị tính không được để trống");
+        this.unit = unit; }
     public void setDescription(String description) { this.description = description; }
 }

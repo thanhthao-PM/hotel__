@@ -13,6 +13,16 @@ public class Discount implements Invoice.InvoiceAdjustment {
 
     // Constructor
     public Discount(String discountId, String invoiceId, Invoice.DiscountType type, double value, String reason, String approvedBy) {
+        //kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(discountId, "Mã giảm giá không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được để trống");
+        if (type == null) {
+            throw new IllegalArgumentException("Loại giảm giá không được null");
+        }
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do giảm giá không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(approvedBy, "Giảm giá phải có mã quản lý duyệt");
+
+
         this.discountId = discountId;
         this.invoiceId = invoiceId;
         this.discountType = type;
@@ -23,6 +33,11 @@ public class Discount implements Invoice.InvoiceAdjustment {
 
     public void setValue(double value) {
         CheckingExpression.checkNonNegativeDouble(value, "Giảm giá không được là số âm"); 
+        // giảm theo phần trăm không được vượt 100%
+        if (discountType == Invoice.DiscountType.PERCENT && value > 100) {
+            throw new IllegalArgumentException("Giảm giá theo phần trăm không được vượt quá 100%");
+        }
+
         this.value = value;
     }
 

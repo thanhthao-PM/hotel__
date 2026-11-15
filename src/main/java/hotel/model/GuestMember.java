@@ -46,9 +46,18 @@ public class GuestMember extends Person {
     }
 
     public static GuestMember fromFileString(String fileString) {
+        // dòng file không được null hoặc rỗng
+        CheckingExpression.checkNotNullOrEmpty(fileString, "Dòng dữ liệu GuestMember không được để trống");
+
         String[] parts = fileString.split("\\|", -1);
         if (parts.length != 11 || !TYPE_TAG.equals(parts[0])) {
             throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo GuestMember từ fileString.");
+        }
+
+        //mã phải đúng dạng KHxxx trước khi cắt chuỗi, tránh StringIndexOutOfBoundsException
+        CheckingExpression.checkNotNullOrEmpty(parts[1], "Mã thành viên không được để trống");
+        if (!parts[1].startsWith(PREFIX) || parts[1].length() <= PREFIX.length()) {
+            throw new IllegalArgumentException("Mã thành viên không đúng định dạng " + PREFIX + "xxx: " + parts[1]);
         }
 
         GuestMember guestMember = new GuestMember(
@@ -72,14 +81,14 @@ public class GuestMember extends Person {
 
     // Constructor 1: TẠO MỚI KHÁCH HÀNG (ID TỰ ĐỘNG TĂNG)
     public GuestMember(String fullName, String phone, Gender gender, String identityNumber, LocalDate dateOfBirth, String address, boolean active, String representativeId, String relationship) {
-        super(PREFIX + String.format("%03d", generateNextNumber()), fullName, phone, gender, identityNumber, dateOfBirth, address, true, false);
+        super(PREFIX + String.format("%03d", generateNextNumber()), fullName, phone, gender, identityNumber, dateOfBirth, address, active, false);
         setRepresentativeId(representativeId);
         setRelationship(relationship);
     }
 
     // Constructor 2: TẠO KHÁCH HÀNG TỪ FILE (ID ĐƯỢC LẤY TRỰC TIẾP)
     public GuestMember(String id, String fullName, String phone, Gender gender, String identityNumber, LocalDate dateOfBirth, String address, boolean active, String representativeId, String relationship) {
-        super(id, fullName, phone, gender, identityNumber, dateOfBirth, address, true, false);
+        super(id, fullName, phone, gender, identityNumber, dateOfBirth, address, active, false);
         setRepresentativeId(representativeId);
         setRelationship(relationship);
     }

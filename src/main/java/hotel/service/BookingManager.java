@@ -12,6 +12,7 @@ import hotel.model.enums.BookingStatus;
 // import hotel.model.enums.DepositStatus;
 import hotel.model.enums.PaymentMethod;
 import hotel.model.enums.RequestStatus;
+import hotel.util.CheckingExpression;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -123,6 +124,10 @@ public class BookingManager {
     public Deposit processDeposit(String requestId, double amount, PaymentMethod method, 
                                   String receivedBy, String referenceNo) {
         BookingRequest req = findRequestById(requestId);
+        // số tiền cọc phải dương (chặn sớm, trước khi tạo mã cọc và đổi dữ liệu)
+        CheckingExpression.checkPositiveDouble(amount, "Số tiền cọc phải > 0");
+        // phiếu chưa có dòng phòng nào thì chia cọc sẽ ra Infinity hoặc NaN
+        CheckingExpression.checkDivideByZero(req.getDetailCount(), "Phiếu yêu cầu chưa có phòng nào để chia tiền cọc");
         if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT) {
             return null;
         }
@@ -194,6 +199,8 @@ public class BookingManager {
         Booking booking;
 
         if ("GROUP".equalsIgnoreCase(req.getBookingType())) {
+            // đặt phòng đoàn phải có ít nhất một dòng phòng
+            CheckingExpression.checkPositiveInt(req.getDetailCount(), "Phiếu đặt phòng đoàn chưa có phòng nào");
             String[] roomIds = new String[req.getDetailCount()];
             BookingDetail[] details = req.getDetails();
             for (int i = 0; i < req.getDetailCount(); i++) {
@@ -205,6 +212,8 @@ public class BookingManager {
                     req.getExpectedCheckInDate(), req.getExpectedCheckOutDate(), 
                     employeeId, note, req.getGroupName(), roomIds, 20);
         } else {
+            // chặn truy cập details[0] khi phiếu chưa có dòng nào (tránh NullPointerException)
+            CheckingExpression.checkValidArrayIndex(0, req.getDetailCount());
             BookingDetail detail = req.getDetails()[0];
             detail.setBookingId(bookingId);
             // Truyền đúng 9 tham số chuẩn của IndividualBooking

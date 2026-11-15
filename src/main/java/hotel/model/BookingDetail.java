@@ -1,5 +1,6 @@
 package hotel.model;
 
+import hotel.util.CheckingExpression;  
 import java.time.LocalDate;
 
 public class BookingDetail {
@@ -17,6 +18,15 @@ public class BookingDetail {
     public BookingDetail(String bookingDetailId, String requestId, String originalRoomId, 
                          int guestCount, double bookingUnitPrice, double depositShare, 
                          LocalDate checkInDate, LocalDate checkOutDate, String notes) {
+
+        CheckingExpression.checkNotNullOrEmpty(bookingDetailId, "Mã chi tiết đặt phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(originalRoomId, "Mã phòng không được để trống");
+        CheckingExpression.checkPositiveInt(guestCount, "Số lượng khách phải > 0");
+        CheckingExpression.checkPositiveDouble(bookingUnitPrice, "Giá phòng phải > 0");
+        CheckingExpression.checkNonNegativeDouble(depositShare, "Tiền cọc của phòng không được âm");
+        CheckingExpression.checkValidDateRange(checkInDate, checkOutDate);
+
+
         this.bookingDetailId = bookingDetailId;
         this.requestId = requestId;
         this.bookingId = null; // Mặc định rỗng khi mới ở giai đoạn Request

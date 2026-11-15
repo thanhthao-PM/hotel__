@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.model.enums.RequestStatus;
+import hotel.util.CheckingExpression;  
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -23,6 +24,21 @@ public class BookingRequest {
     public BookingRequest(String requestId, String customerId, String bookingType, String groupName, 
                           LocalDate expectedCheckIn, LocalDate expectedCheckOut, 
                           String createdBy, int maxDetails) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(requestId, "Mã phiếu yêu cầu không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(customerId, "Mã khách hàng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(bookingType, "Loại đặt phòng không được để trống");
+        if (!"INDIVIDUAL".equals(bookingType) && !"GROUP".equals(bookingType)) {
+            throw new IllegalArgumentException("Loại đặt phòng phải là INDIVIDUAL hoặc GROUP");
+        }
+        if ("GROUP".equals(bookingType)) {
+            CheckingExpression.checkNotNullOrEmpty(groupName, "Tên đoàn không được để trống khi đặt phòng đoàn");
+        }
+        CheckingExpression.checkValidDateRange(expectedCheckIn, expectedCheckOut);
+        CheckingExpression.checkNotNullOrEmpty(createdBy, "Mã nhân viên nhận yêu cầu không được để trống");
+        CheckingExpression.checkPositiveInt(maxDetails, "Số dòng chi tiết tối đa phải > 0");
+
+
         this.requestId = requestId;
         this.customerId = customerId;
         this.bookingType = bookingType;
@@ -38,6 +54,11 @@ public class BookingRequest {
     }
 
     public void addDetail(BookingDetail detail) {
+        // không cho thêm dòng null
+        if (detail == null) {
+            throw new IllegalArgumentException("Chi tiết đặt phòng không được null");
+        }
+
         if (detailCount < details.length) {
             details[detailCount++] = detail;
         }
@@ -58,6 +79,8 @@ public class BookingRequest {
     }
 
     public void cancel(String reason) {
+        // bắt buộc có lý do hủy
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do hủy không được để trống");
         this.cancelReason = reason;
         this.requestStatus = RequestStatus.CANCELLED;
     }

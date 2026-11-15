@@ -1,0 +1,23 @@
+# ============================================================
+# FILE: employees.txt  -  NHÂN VIÊN (class Employee)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: EM001, EM002...
+# Ngày: yyyy-MM-dd | Tiền: số nguyên VNĐ
+#
+# Cột: id|fullName|phone|gender|identityNumber|dateOfBirth|position|salary|hireDate|address|active
+#   gender: MALE, FEMALE, OTHER
+#   position: chức danh công việc (không phải quyền đăng nhập)
+#   active=false: nhân viên đã nghỉ việc (xóa mềm)
+# ============================================================
+
+EM001|Nguyễn Văn An|0901000001|MALE|079085000001|1985-03-12|Giám đốc|35000000|2018-01-05|12 Lê Lợi, Quận 1, TP.HCM|true
+EM002|Trần Thị Bích|0901000002|FEMALE|079088000002|1988-07-25|Quản lý|25000000|2019-03-10|45 Nguyễn Huệ, Quận 1, TP.HCM|true
+EM003|Lê Minh Châu|0901000003|FEMALE|079095000003|1995-11-02|Lễ tân|12000000|2021-06-01|88 Hai Bà Trưng, Quận 3, TP.HCM|true
+EM004|Phạm Quốc Dũng|0901000004|MALE|079096000004|1996-02-18|Lễ tân|12000000|2021-09-15|27 Võ Văn Tần, Quận 3, TP.HCM|true
+EM005|Võ Thị Em|0901000005|FEMALE|079098000005|1998-09-30|Lễ tân|11000000|2022-02-20|63 Cách Mạng Tháng 8, Quận 10, TP.HCM|true
+EM006|Hoàng Văn Phúc|0901000006|MALE|079090000006|1990-05-14|Buồng phòng|9000000|2020-04-12|15 Lý Thường Kiệt, Quận 10, TP.HCM|true
+EM007|Đặng Thị Giang|0901000007|FEMALE|079092000007|1992-12-08|Buồng phòng|9000000|2020-08-01|102 Trần Hưng Đạo, Quận 5, TP.HCM|true
+EM008|Bùi Văn Hải|0901000008|MALE|079087000008|1987-01-21|Bảo vệ|8500000|2019-11-11|9 Nguyễn Trãi, Quận 5, TP.HCM|true
+EM009|Ngô Thị Lan|0901000009|FEMALE|079093000009|1993-04-06|Kế toán|14000000|2020-01-06|76 Điện Biên Phủ, Bình Thạnh, TP.HCM|true
+EM010|Đỗ Văn Khoa|0901000010|MALE|079099000010|1999-08-17|Lễ tân|10000000|2023-03-01|31 Phan Xích Long, Phú Nhuận, TP.HCM|false

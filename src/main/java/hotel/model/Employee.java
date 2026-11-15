@@ -25,7 +25,9 @@ public class Employee extends Person {
     }
 
     public void setHireDate(LocalDate hireDate) {
-        CheckingExpression.checkNotNullOrEmpty(String.valueOf(hireDate), "Ngày tuyển dụng không được để trống");
+        if (hireDate == null) {
+            throw new IllegalArgumentException("Ngày tuyển dụng không được để trống");
+        }
         this.hireDate = hireDate;
     }
 
@@ -55,10 +57,20 @@ public class Employee extends Person {
     }
 
     public static Employee fromFileString(String fileString) {
+        // dòng file không được null hoặc rỗng
+        CheckingExpression.checkNotNullOrEmpty(fileString, "Dòng dữ liệu Employee không được để trống");
+
         String[] parts = fileString.split("\\|", -1);
-        if (parts.length != 13 || !TYPE_TAG.equals(parts[0])) {
+        if (parts.length != 12 || !TYPE_TAG.equals(parts[0])) {
             throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo Employee từ fileString.");
         }
+
+        //mã phải đúng dạng NVxxx trước khi cắt chuỗi, tránh StringIndexOutOfBoundsException
+        CheckingExpression.checkNotNullOrEmpty(parts[1], "Mã nhân viên không được để trống");
+        if (!parts[1].startsWith(PREFIX) || parts[1].length() <= PREFIX.length()) {
+            throw new IllegalArgumentException("Mã nhân viên không đúng định dạng " + PREFIX + "xxx: " + parts[1]);
+        }
+
 
         Employee employee = new Employee(
                 parts[1], // id

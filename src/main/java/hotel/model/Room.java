@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.model.enums.RoomStatus;
+import hotel.util.CheckingExpression;
 import hotel.util.FileUtil;
 
 // Lớp trừu tượng cha của các loại phòng
@@ -20,6 +21,16 @@ public abstract class Room {
     // Constructor đầy đủ (dùng cho cả tạo mới và nạp từ file)
     public Room(String roomId, String roomNumber, int floor, int capacity,
                 double basePrice, RoomStatus status, boolean active) {
+        // kiểm tra dữ liệu đầu vào trước khi gán
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(roomNumber, "Số phòng không được để trống");
+        CheckingExpression.checkPositiveInt(floor, "Tầng phải > 0");
+        CheckingExpression.checkPositiveInt(capacity, "Sức chứa phòng phải > 0");
+        CheckingExpression.checkPositiveDouble(basePrice, "Giá phòng một đêm phải > 0");
+        if (status == null) {
+            throw new IllegalArgumentException("Trạng thái phòng không được null");
+        }
+
         this.roomId = roomId;
         this.roomNumber = roomNumber;
         this.floor = floor;
@@ -109,9 +120,17 @@ public abstract class Room {
     public boolean isActive() { return active; }
 
     // Setter (không có setter cho status để module khác không đổi trực tiếp)
-    public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
-    public void setFloor(int floor) { this.floor = floor; }
-    public void setCapacity(int capacity) { this.capacity = capacity; }
-    public void setBasePrice(double basePrice) { this.basePrice = basePrice; }
+    public void setRoomNumber(String roomNumber) { 
+        CheckingExpression.checkNotNullOrEmpty(roomNumber, "Số phòng không được để trống");
+        this.roomNumber = roomNumber; }
+    public void setFloor(int floor) { 
+        CheckingExpression.checkPositiveInt(floor, "Tầng phải > 0");
+        this.floor = floor; }
+    public void setCapacity(int capacity) { 
+        CheckingExpression.checkPositiveInt(capacity, "Sức chứa phòng phải > 0");
+        this.capacity = capacity; }
+    public void setBasePrice(double basePrice) { 
+        CheckingExpression.checkPositiveDouble(basePrice, "Giá phòng một đêm phải > 0");
+        this.basePrice = basePrice; }
     public void setActive(boolean active) { this.active = active; }
 }

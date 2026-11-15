@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import hotel.util.CheckingExpression;
 import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +23,7 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     private static final int INITIAL_CAPACITY = 10;
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "admin123";   // phải đủ độ dài tối thiểu
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private Account[] items;
     private int count;
@@ -95,6 +96,9 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     }
 
     public Account login(String username, String rawPassword) {
+        // tên đăng nhập hoặc mật khẩu rỗng thì báo cùng thông báo chung, không lộ thông tin
+        CheckingExpression.checkNotNullOrEmpty(username, "Sai tên đăng nhập hoặc mật khẩu.");
+        CheckingExpression.checkNotNullOrEmpty(rawPassword, "Sai tên đăng nhập hoặc mật khẩu.");
         Account acc = findById(username);
         // Cùng một thông báo cho "sai tên" và "sai mật khẩu" để không lộ username nào tồn tại
         if (acc == null) throw new IllegalArgumentException("Sai tên đăng nhập hoặc mật khẩu.");

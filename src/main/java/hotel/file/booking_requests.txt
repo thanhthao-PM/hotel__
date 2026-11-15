@@ -1,0 +1,25 @@
+# ============================================================
+# FILE: booking_requests.txt  -  PHIẾU YÊU CẦU ĐẶT PHÒNG QUA ĐIỆN THOẠI (class BookingRequest)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: RQ001, RQ002...
+# Ngày: yyyy-MM-dd | Ngày giờ: yyyy-MM-ddTHH:mm
+#
+# Cột: requestId|customerId|createdBy|bookingId|bookingType|groupName|expectedCheckInDate|expectedCheckOutDate|requestStatus|depositDueAt|cancelReason|createdAt
+#   customerId: mã CU... (người gọi, cũng là người đại diện)
+#   createdBy: mã EM... của nhân viên nhận cuộc gọi
+#   bookingId: rỗng cho tới khi khách đến và được lập Booking (trạng thái CONVERTED)
+#   bookingType: INDIVIDUAL hoặc GROUP
+#   requestStatus: PENDING_DEPOSIT, CONFIRMED, CONVERTED, CANCELLED, EXPIRED, NO_SHOW
+# Các phòng của phiếu nằm trong booking_details.txt, tiền cọc nằm trong deposits.txt
+# ============================================================
+
+RQ001|CU001|EM003|BK001|INDIVIDUAL||2026-11-10|2026-11-13|CONVERTED|2026-11-08T18:00||2026-11-06T09:20
+RQ002|CU002|EM004|BK002|INDIVIDUAL||2026-11-05|2026-11-07|CONVERTED|2026-11-04T18:00||2026-11-02T10:05
+RQ003|CU003|EM003|BK003|GROUP|Gia đình Lê|2026-11-08|2026-11-10|CONVERTED|2026-11-06T18:00||2026-11-04T15:30
+RQ004|CU004|EM005||INDIVIDUAL||2026-11-15|2026-11-17|CANCELLED|2026-11-10T18:00|Khách đổi lịch công tác|2026-11-08T11:00
+RQ005|CU008|EM004||INDIVIDUAL||2026-11-20|2026-11-22|EXPIRED|2026-11-10T18:00|Quá hạn đặt cọc|2026-11-09T08:45
+RQ006|CU006|EM005||INDIVIDUAL||2026-11-18|2026-11-20|PENDING_DEPOSIT|2026-11-13T17:00||2026-11-12T09:00
+RQ007|CU007|EM004||INDIVIDUAL||2026-11-14|2026-11-16|CONFIRMED|2026-11-12T18:00||2026-11-10T14:20
+RQ008|CU008|EM003||INDIVIDUAL||2026-11-01|2026-11-03|NO_SHOW|2026-10-30T18:00|Khách không đến|2026-10-28T16:10
+RQ009|CU005|EM003|BK005|INDIVIDUAL||2026-11-11|2026-11-13|CONVERTED|2026-11-10T18:00||2026-11-08T09:40

@@ -1,6 +1,7 @@
 package hotel.model;
 
 import hotel.model.enums.BookingStatus;
+import hotel.util.CheckingExpression;  
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -18,6 +19,12 @@ public abstract class Booking {
     public Booking(String bookingId, String requestId, String customerId, 
                    LocalDate checkInDate, LocalDate expectedCheckOutDate, 
                    String createdBy, String note) {
+        CheckingExpression.checkNotNullOrEmpty(bookingId, "Mã đặt phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(customerId, "Mã khách hàng đặt phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(createdBy, "Mã nhân viên lập phiếu không được để trống");
+        CheckingExpression.checkValidDateRange(checkInDate, expectedCheckOutDate);
+
+        
         this.bookingId = bookingId;
         this.requestId = requestId;
         this.customerId = customerId;
