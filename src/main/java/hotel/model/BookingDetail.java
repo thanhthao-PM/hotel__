@@ -52,8 +52,23 @@ public class BookingDetail {
      * Nâng phòng lúc nhận phòng (Upgrade room)
      */
     public void upgradeRoom(String newRoomId, double newPrice) {
+        CheckingExpression.checkNotNullOrEmpty(newRoomId, "Mã phòng không được để trống");
+        CheckingExpression.checkPositiveDouble(newPrice, "Giá phòng phải > 0");
         this.originalRoomId = newRoomId;
         this.bookingUnitPrice = newPrice;
+    }
+
+    public void updateReservation(String roomId, int guests, double unitPrice,
+                                  LocalDate checkIn, LocalDate checkOut) {
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
+        CheckingExpression.checkPositiveInt(guests, "Số lượng khách phải > 0");
+        CheckingExpression.checkPositiveDouble(unitPrice, "Giá phòng phải > 0");
+        CheckingExpression.checkValidDateRange(checkIn, checkOut);
+        this.originalRoomId = roomId;
+        this.guestCount = guests;
+        this.bookingUnitPrice = unitPrice;
+        this.checkInDate = checkIn;
+        this.checkOutDate = checkOut;
     }
 
     // --- GETTERS & SETTERS ---

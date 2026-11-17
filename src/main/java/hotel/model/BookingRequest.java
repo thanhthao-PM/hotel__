@@ -14,6 +14,7 @@ public class BookingRequest {
     private LocalDate expectedCheckOutDate;
     private LocalDateTime depositDueAt;
     private String cancelReason;
+    private boolean cancellationPending;
     private RequestStatus requestStatus;
     private String createdBy;
     private LocalDateTime createdAt;
@@ -82,11 +83,34 @@ public class BookingRequest {
         // bắt buộc có lý do hủy
         CheckingExpression.checkNotNullOrEmpty(reason, "Lý do hủy không được để trống");
         this.cancelReason = reason;
+        this.cancellationPending = false;
         this.requestStatus = RequestStatus.CANCELLED;
     }
 
     public void expire() {
         this.requestStatus = RequestStatus.EXPIRED;
+    }
+
+    public void convert() {
+        this.requestStatus = RequestStatus.CONVERTED;
+        this.cancellationPending = false;
+    }
+
+    public void requestCancellation(String reason) {
+        CheckingExpression.checkNotNullOrEmpty(reason, "Lý do hủy không được để trống");
+        if (!isActive()) {
+            throw new IllegalStateException("Phiếu không còn hiệu lực để đề nghị hủy");
+        }
+        this.cancelReason = reason;
+        this.cancellationPending = true;
+    }
+
+    public void rejectCancellation() {
+        if (!cancellationPending) {
+            throw new IllegalStateException("Phiếu không có đề nghị hủy đang chờ duyệt");
+        }
+        this.cancellationPending = false;
+        this.cancelReason = null;
     }
 
     public boolean isActive() {
@@ -107,6 +131,7 @@ public class BookingRequest {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getDepositDueAt() { return depositDueAt; }
     public String getCancelReason() { return cancelReason; }
+    public boolean isCancellationPending() { return cancellationPending; }
 
     public void setRequestId(String requestId) { this.requestId = requestId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
