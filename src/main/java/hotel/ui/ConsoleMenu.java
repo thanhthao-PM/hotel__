@@ -35,7 +35,8 @@ import hotel.service.StayManager;
  *   run()            -> vòng lặp chính: đăng nhập -> menu theo Role -> đăng xuất
  *   showAdminMenu / showManagerMenu / showEmployeeMenu   -> menu chính của từng Role (có switch-case)
  *   Phần "P1"        -> menu con của module Người, Tài khoản (đã làm)
- *   Phần "KHUNG P2..P5" -> menu con của các bạn khác: chỉ cần thay notReady(...) bằng lệnh gọi Manager của mình
+ *   Phần "P2"        -> menu Phòng, Dịch vụ, Bảo trì phòng (đã làm)
+ *   Phần "KHUNG P3..P5" -> menu con của các bạn khác: chỉ cần thay notReady(...) bằng lệnh gọi Manager của mình
  *   Cuối file        -> các hàm nhập liệu dùng chung
  */
 public class ConsoleMenu {
@@ -63,10 +64,14 @@ public class ConsoleMenu {
 
     public ConsoleMenu(AccountManager accountManager,
                        EmployeeManager employeeManager,
-                       CustomerManager customerManager) {
+                       CustomerManager customerManager,
+                       RoomManager roomManager,
+                       ServiceManager serviceManager) {
         this.accountManager = accountManager;
         this.employeeManager = employeeManager;
         this.customerManager = customerManager;
+        this.roomManager = roomManager;
+        this.serviceManager = serviceManager;
     }
 
     // ============================================================
@@ -297,7 +302,11 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách phòng (P2)");        break;   // TODO(P2): roomManager.displayAll()
+                    // [P2] Mục 1: mở menu Phòng (EMPLOYEE chỉ thấy các mục xem, tìm, dọn phòng, báo hỏng)
+                    case 1:
+                        openSub(this::showRoomMenu);
+                        break;
+
                     case 2: openSub(() -> showPostListMenu(false));    break;
                     case 3:
                         if (isEmployeeRole()) noPermission();          // kiểm tra quyền ngay trong xử lý, không chỉ ẩn menu
@@ -311,7 +320,12 @@ public class ConsoleMenu {
                         break;
                     // P4 hết --
                     case 6: notReady("Danh sách hóa đơn (P5)");      break;   // TODO(P5)
-                    case 7: notReady("Danh sách dịch vụ (P2)");      break;   // TODO(P2)
+
+                    // [P2] Mục 7: mở menu Dịch vụ (EMPLOYEE chỉ xem)
+                    case 7:
+                        openSub(this::showServiceMenu);
+                        break;
+
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1055,18 +1069,29 @@ public class ConsoleMenu {
     }
 
     // ############################################################
-    // KHUNG MENU CỦA P2, P3, P4, P5
-    // Chủ module chỉ cần thay dòng notReady(...) bằng lệnh gọi Manager của mình.
-    // Giữ nguyên tên hàm và cấu trúc vòng lặp để menu chính không bị gãy.
     // ############################################################
 
     // ---------- MODULE P2: PHÒNG ----------
     private void showRoomMenu() {
         while (true) {
             printTitle("PHÒNG");
-            printMenu("1. Danh sách phòng", "2. Tìm phòng trống", canEdit() ? "3. Thêm phòng" : null,
-                    canEdit() ? "4. Sửa phòng" : null, canEdit() ? "5. Xóa phòng" : null,
-                    canEdit() ? "6. Đổi giá phòng" : null);
+
+            // Dựng danh sách mục menu: mục nào cần quyền thì chỉ thêm khi canEdit() = true
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách phòng");
+            menuItems.add("2. Tìm phòng trống");
+            menuItems.add("3. Tìm kiếm / lọc");
+            menuItems.add("4. Sắp xếp theo giá");
+            menuItems.add("5. Đổi trạng thái (dọn phòng)");
+            if (canEdit()) {
+                menuItems.add("6. Thêm phòng");
+                menuItems.add("7. Sửa phòng");
+                menuItems.add("8. Xóa phòng");
+                menuItems.add("9. Đổi giá phòng");
+            }
+            menuItems.add("10. Bảo trì phòng");
+
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -1074,25 +1099,31 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách phòng"); break;   // TODO(P2)
-                    case 2: notReady("Tìm phòng trống"); break;   // TODO(P2)
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Thêm phòng");   // TODO(P2)
-                        break;
-                    case 4:
-                        if (!canEdit()) noPermission();
-                        else notReady("Sửa phòng");   // TODO(P2)
-                        break;
-                    case 5:
-                        if (!canEdit()) noPermission();
-                        else notReady("Xóa phòng");   // TODO(P2)
-                        break;
+                    case 1: roomManager.displayAll();   break;
+                    case 2: findFreeRooms();    break;
+                    case 3: searchRooms();  break;
+                    case 4: sortRooms();    break;
+                    case 5: changeRoomStatus(); break;
+                    // Kiểm tra quyền ngay trong xử lý, không chỉ dựa vào việc ẩn menu
                     case 6:
-                        if (!canEdit()) noPermission();
-                        else notReady("Đổi giá phòng");   // TODO(P2)
+                        if (canEdit()) {    addRoom();  }
+                        else {  noPermission(); }
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+                    case 7:
+                        if (canEdit()) {    editRoom(); }
+                        else {  noPermission(); }
+                        break;
+                    case 8:
+                        if (canEdit()) {    removeRoom();   }
+                        else {  noPermission(); }
+                        break;
+                    case 9:
+                        if (canEdit()) { changeRoomPrice(); }
+                        else {  noPermission(); }
+                        break;
+                    case 10:    openSub(this::showMaintenanceMenu);     break;
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
@@ -1104,8 +1135,19 @@ public class ConsoleMenu {
     private void showServiceMenu() {
         while (true) {
             printTitle("DỊCH VỤ");
-            printMenu("1. Danh sách dịch vụ", canEdit() ? "2. Thêm dịch vụ" : null,
-                    canEdit() ? "3. Sửa dịch vụ" : null, canEdit() ? "4. Ngưng cung cấp dịch vụ" : null);
+
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách dịch vụ");
+            menuItems.add("2. Tìm kiếm");
+            menuItems.add("3. Sắp xếp theo giá");
+            if (canEdit()) {
+                menuItems.add("4. Thêm dịch vụ");
+                menuItems.add("5. Sửa dịch vụ");
+                menuItems.add("6. Đổi đơn giá");
+                menuItems.add("7. Ngưng cung cấp");
+                menuItems.add("8. Cung cấp lại");
+            }
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -1113,20 +1155,44 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách dịch vụ"); break;   // TODO(P2)
-                    case 2:
-                        if (!canEdit()) noPermission();
-                        else notReady("Thêm dịch vụ");   // TODO(P2)
-                        break;
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Sửa dịch vụ");   // TODO(P2)
-                        break;
+                    case 1:     serviceManager.displayAll();    break;
+                    case 2:     searchServices();   break;
+                    case 3:     sortServices();     break;
+                    // Kiểm tra quyền ngay trong xử lý: EMPLOYEE chỉ được xem
                     case 4:
-                        if (!canEdit()) noPermission();
-                        else notReady("Ngưng cung cấp dịch vụ");   // TODO(P2)
+                        if (canEdit()) {    addService();   }
+                        else {      noPermission();  }
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+                    case 5:
+                        if (canEdit()) {    editService();  }
+                        else {   noPermission();}
+                        break;
+                    case 6:
+                        if (canEdit()) {
+                            changeServicePrice();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    case 7:
+                        if (canEdit()) {
+                            deactivateService();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    case 8:
+                        if (canEdit()) {
+                            activateService();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
@@ -1138,8 +1204,14 @@ public class ConsoleMenu {
     private void showMaintenanceMenu() {
         while (true) {
             printTitle("BẢO TRÌ PHÒNG");
-            printMenu("1. Danh sách bảo trì", "2. Tạo bản ghi bảo trì (báo hỏng)",
-                    canEdit() ? "3. Đóng bản ghi bảo trì" : null);
+
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách bảo trì");
+            menuItems.add("2. Tạo bản ghi bảo trì (báo hỏng)");
+            if (canEdit()) {
+                menuItems.add("3. Đóng bản ghi bảo trì");
+            }
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -1147,13 +1219,25 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách bảo trì"); break;   // TODO(P2)
-                    case 2: notReady("Tạo bản ghi bảo trì (báo hỏng)"); break;   // TODO(P2)
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Đóng bản ghi bảo trì");   // TODO(P2)
+                    case 1:
+                        roomManager.displayMaintenances();
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+
+                    case 2:
+                        reportMaintenance();
+                        break;
+
+                    case 3:
+                        // EMPLOYEE chỉ được báo hỏng, không được đóng bản ghi
+                        if (canEdit()) {
+                            closeMaintenance();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
