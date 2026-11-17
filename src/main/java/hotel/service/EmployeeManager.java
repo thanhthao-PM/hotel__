@@ -3,9 +3,9 @@ package hotel.service;
 import hotel.model.Employee;
 import hotel.storage.IFileHandler;
 import hotel.util.CheckingExpression;
+import hotel.util.FileUtil;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -44,12 +44,23 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         return true;
     }
 
-    @Override public boolean update(Employee e) {
+        @Override public boolean update(Employee e) {
         // Kiểm tra xem nhân viên có rỗng không
         if(e == null) return false;
         // Tìm nhân viên và update
         for (int i = 0; i < this.count; i++) {
             if (items[i].getId().equals(e.getId())) {
+                // duyệt mọi nhân viên khác (bỏ qua vị trí i) để kiểm tra trùng CCCD và SĐT
+                for (int j = 0; j < count; j++) {
+                    if (j == i) continue;
+                    String idNum = e.getIdentityNumber();
+                    if (idNum != null && !idNum.isEmpty() && idNum.equals(items[j].getIdentityNumber())) {
+                        return false;
+                    }
+                    if (e.getPhone() != null && e.getPhone().equals(items[j].getPhone())) {
+                        return false;
+                    }
+                }
                 items[i] = e;
                 return true;
             }
@@ -190,18 +201,12 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
     }
 
     @Override public void writeFile() {
-        Path path = Paths.get(FILE_PATH);
+        String[] lines = new String[count];
+        for (int i = 0; i < count; i++) {
+            lines[i] = items[i].toFileString();
+        }
         try {
-            Path parent = path.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-            try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-                for (int i = 0; i < count; i++) {
-                    writer.write(items[i].toFileString());
-                    writer.newLine();
-                }
-            }
+            FileUtil.writeAllLines(FILE_PATH, lines, count);
         } catch (IOException ex) {
             System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
         }
