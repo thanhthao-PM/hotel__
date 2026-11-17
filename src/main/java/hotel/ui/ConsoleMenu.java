@@ -1,5 +1,5 @@
 package hotel.ui;
- 
+
 import hotel.model.Account;
 import hotel.model.Customer;
 import hotel.model.Employee;
@@ -11,14 +11,23 @@ import hotel.service.AccountManager;
 import hotel.service.CustomerManager;
 import hotel.service.EmployeeManager;
 import hotel.util.CheckingExpression;
- 
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
- 
+
+// P4 thêm
+import hotel.model.CheckInReceipt;
+import hotel.model.CheckOutReceipt;
+import hotel.model.ServiceUsage;
+import hotel.model.StayRecord;
+import hotel.service.StayLinks;
+import hotel.service.StayManager;
+// P4 hết ---
+
 /**
  * TOÀN BỘ MENU nằm trong file này. Mỗi menu là một hàm showXxxMenu().
  *
@@ -30,21 +39,28 @@ import java.util.Scanner;
  *   Cuối file        -> các hàm nhập liệu dùng chung
  */
 public class ConsoleMenu {
- 
+
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final int FRAME_WIDTH = 60;
     private static final String INDENT = "    ";
- 
+
     private final Scanner sc = new Scanner(System.in);   // CHỈ MỘT Scanner cho cả chương trình
- 
+
     private final AccountManager accountManager;
     private final EmployeeManager employeeManager;
     private final CustomerManager customerManager;
+    // P4 thêm --
+    private StayManager stayManager;
+    // P4 hết ---
     // TODO(P2..P5): thêm RoomManager, BookingManager... vào đây và vào constructor
- 
+
     private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
     private int depth = 0;
- 
+
+    // P4 thêm --
+    public void setStayManager(StayManager stayManager) { this.stayManager = stayManager; }
+    // P4 hết ---
+
     public ConsoleMenu(AccountManager accountManager,
                        EmployeeManager employeeManager,
                        CustomerManager customerManager) {
@@ -52,7 +68,7 @@ public class ConsoleMenu {
         this.employeeManager = employeeManager;
         this.customerManager = customerManager;
     }
- 
+
     // ============================================================
     // VÒNG CHẠY CHÍNH
     // ============================================================
@@ -63,18 +79,18 @@ public class ConsoleMenu {
                 System.out.println("Tạm biệt!");
                 return;
             }
- 
+
             switch (currentUser.getRole()) {
                 case ADMIN:    showAdminMenu();    break;
                 case MANAGER:  showManagerMenu();  break;
                 default:       showEmployeeMenu(); break;
             }
- 
+
             saveAll();            // đăng xuất thì lưu dữ liệu
             currentUser = null;
         }
     }
- 
+
     // Trả về Account đăng nhập thành công, hoặc null nếu người dùng chọn thoát
     private Account login() {
         printTitle("ĐĂNG NHẬP");
@@ -82,10 +98,10 @@ public class ConsoleMenu {
             System.out.print("Tên đăng nhập (0 để thoát): ");
             String username = sc.nextLine().trim();
             if (username.equals("0")) return null;
- 
+
             System.out.print("Mật khẩu: ");
             String password = sc.nextLine();
- 
+
             try {
                 Account acc = accountManager.login(username, password);
                 if (acc.isMustChangePassword()) {
@@ -98,13 +114,16 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void saveAll() {
         employeeManager.writeFile();
         accountManager.writeFile();
         customerManager.writeFile();
+        // P4 thêm --
+        if (stayManager != null) stayManager.writeFile();
+        // P4 hết --
     }
- 
+
     // ============================================================
     // MENU CHÍNH THEO ROLE
     // ============================================================
@@ -114,10 +133,10 @@ public class ConsoleMenu {
             printMenu("1. Quản lý tài khoản", "2. Quản lý nhân viên", "3. Danh mục khách sạn",
                     "4. Nghiệp vụ", "5. Thống kê và báo cáo", "6. Hệ thống", "7. Tài khoản của tôi");
             item("0. Đăng xuất");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: openSub(this::showAccountMenu);   break;
@@ -134,17 +153,17 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void showManagerMenu() {
         while (true) {
             printTitle("QUẢN LÝ: " + currentUser.getUsername());
             printMenu("1. Danh sách", "2. Đặt phòng và lưu trú", "3. Thanh toán", "4. Duyệt và xử lý",
                     "5. Danh mục khách sạn", "6. Nhân viên", "7. Thống kê", "8. Hệ thống");
             item("0. Đăng xuất");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: openSub(this::showListMenu);            break;
@@ -162,17 +181,17 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // Sắp theo thứ tự công việc một ca trực: đặt phòng, nhận phòng, dịch vụ, trả phòng, thanh toán
     private void showEmployeeMenu() {
         while (true) {
             printTitle("NHÂN VIÊN: " + currentUser.getUsername());
             printMenu("1. Đặt phòng", "2. Lưu trú", "3. Thanh toán", "4. Khách hàng", "5. Danh sách", "6. Cá nhân");
             item("0. Đăng xuất");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: openSub(this::showBookingMenu);   break;
@@ -188,7 +207,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ============================================================
     // MENU GOM NHÓM (chỉ chọn module rồi gọi menu con của module đó)
     // ============================================================
@@ -207,7 +226,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void showBusinessMenu() {
         while (true) {
             printTitle("NGHIỆP VỤ");
@@ -227,7 +246,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void showBookingAndStayMenu() {
         while (true) {
             printTitle("ĐẶT PHÒNG VÀ LƯU TRÚ");
@@ -244,7 +263,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void showApprovalMenu() {
         while (true) {
             printTitle("DUYỆT VÀ XỬ LÝ");
@@ -262,7 +281,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ============================================================
     // DANH SÁCH (dùng chung cho mọi Role)
     // ============================================================
@@ -272,10 +291,10 @@ public class ConsoleMenu {
             printMenu("1. Phòng", "2. Khách hàng", isEmployeeRole() ? null : "3. Nhân viên",
                     "4. Đặt phòng", "5. Khách đang lưu trú", "6. Hóa đơn", "7. Dịch vụ");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách phòng (P2)");        break;   // TODO(P2): roomManager.displayAll()
@@ -285,7 +304,12 @@ public class ConsoleMenu {
                         else openSub(() -> showPostListMenu(true));
                         break;
                     case 4: notReady("Danh sách đặt phòng (P3)");    break;   // TODO(P3)
-                    case 5: notReady("Khách đang lưu trú (P4)");     break;   // TODO(P4)
+                    // P4 thêm --
+                    case 5:
+                        if (stayManager == null) notReady("Khách đang lưu trú");
+                        else stayManager.displayActiveGuests();
+                        break;
+                    // P4 hết --
                     case 6: notReady("Danh sách hóa đơn (P5)");      break;   // TODO(P5)
                     case 7: notReady("Danh sách dịch vụ (P2)");      break;   // TODO(P2)
                     default: System.out.println("Lựa chọn không hợp lệ.");
@@ -419,10 +443,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách tài khoản", "2. Cấp tài khoản cho nhân viên",
                     "3. Khóa / mở khóa", "4. Đặt lại mật khẩu", "5. Đổi quyền", "6. Xóa tài khoản");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: accountManager.displayAll(); break;
@@ -438,7 +462,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void createAccount() {
         printTitle("CẤP TÀI KHOẢN CHO NHÂN VIÊN");
         String employeeId = readNonEmpty("Mã nhân viên (VD NV001): ").toUpperCase();
@@ -471,14 +495,14 @@ public class ConsoleMenu {
                 System.out.println("Lỗi: " + e.getMessage());
             }
         }
- 
+
         if (accountManager.add(acc)) {
             System.out.println("Đã cấp tài khoản. Người dùng phải đổi mật khẩu ở lần đăng nhập đầu.");
         } else {
             System.out.println("Không tạo được tài khoản (trùng tên đăng nhập).");
         }
     }
- 
+
     private void toggleLock() {
         String username = readNonEmpty("Tên đăng nhập: ");
         if (username.equalsIgnoreCase(currentUser.getUsername())) {
@@ -496,7 +520,7 @@ public class ConsoleMenu {
             System.out.println("Đã khóa " + username + ".");
         }
     }
- 
+
     private void resetPassword() {
         String username = readNonEmpty("Tên đăng nhập: ");
         String temp = readNonEmpty("Mật khẩu tạm (tối thiểu 8 ký tự): ");
@@ -506,7 +530,7 @@ public class ConsoleMenu {
             System.out.println("Không tìm thấy tài khoản.");
         }
     }
- 
+
     private void changeRole() {
         String username = readNonEmpty("Tên đăng nhập: ");
         if (username.equalsIgnoreCase(currentUser.getUsername())) {
@@ -520,7 +544,7 @@ public class ConsoleMenu {
             System.out.println("Không đổi được (không tìm thấy, hoặc là Admin cuối cùng).");
         }
     }
- 
+
     private void removeAccount() {
         String username = readNonEmpty("Tên đăng nhập cần xóa: ");
         if (username.equalsIgnoreCase(currentUser.getUsername())) {
@@ -534,7 +558,7 @@ public class ConsoleMenu {
             System.out.println("Không xóa được (không tìm thấy, hoặc là Admin cuối cùng).");
         }
     }
- 
+
     // ============================================================
     // P1: NHÂN VIÊN (ADMIN và MANAGER)
     // ============================================================
@@ -548,10 +572,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách", "2. Danh sách (sắp xếp theo tên)", "3. Thêm nhân viên",
                     "4. Sửa nhân viên", "5. Xóa (ngưng hoạt động)", "6. Tìm kiếm");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: employeeManager.displayAll(); break;
@@ -570,7 +594,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void addEmployee() {
         System.out.println("--- Thêm nhân viên ---");
         // Đọc và kiểm tra TỪNG trường trước, rồi mới new (tránh tăng bộ đếm mã khi dữ liệu sai)
@@ -583,7 +607,7 @@ public class ConsoleMenu {
         String position = readNonEmpty("Chức danh: ");
         double salary = readNonNegativeDouble("Lương: ");
         LocalDate hireDate = readDate("Ngày vào làm (dd/MM/yyyy): ");
- 
+
         Employee e = new Employee(name, phone, gender, identity, dob, address, true, position, salary, hireDate);
         if (employeeManager.add(e)) {
             System.out.println("Đã thêm nhân viên " + e.getId() + ".");
@@ -591,7 +615,7 @@ public class ConsoleMenu {
             System.out.println("Không thêm được: trùng mã, CCCD hoặc SĐT.");
         }
     }
- 
+
     private void removeEmployee() {
         String id = readNonEmpty("Mã nhân viên: ").toUpperCase();
         Employee target = employeeManager.findById(id);
@@ -653,7 +677,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ============================================================
     // P1: KHÁCH HÀNG (mọi Role; EMPLOYEE không được xóa)
     // ============================================================
@@ -663,10 +687,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách", "2. Tìm kiếm", "3. Thêm khách hàng", "4. Sửa khách hàng",
                     isEmployeeRole() ? null : "5. Xóa (ngưng hoạt động)", "6. Thành viên đoàn");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: customerManager.displayAll();   break;
@@ -685,7 +709,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void editCustomer() {
         String id = readNonEmpty("Mã khách hàng cần sửa: ").toUpperCase();
         Customer customer = customerManager.findCustomerById(id);
@@ -936,7 +960,7 @@ public class ConsoleMenu {
         LocalDate dob = readDate("Ngày sinh (dd/MM/yyyy): ");
         String address = readNonEmpty("Địa chỉ: ");
         String email = readEmail();
- 
+
         Customer c = new Customer(name, phone, gender, identity, dob, address, true, email);
         if (customerManager.add(c)) {
             System.out.println("Đã thêm khách hàng " + c.getId() + ".");
@@ -944,7 +968,7 @@ public class ConsoleMenu {
             System.out.println("Không thêm được: trùng mã, CCCD hoặc SĐT.");
         }
     }
- 
+
     private void removeCustomer() {
         String id = readNonEmpty("Mã khách hàng: ").toUpperCase();
         if (!confirm("Ngưng hoạt động khách " + id + "?")) return;
@@ -955,7 +979,7 @@ public class ConsoleMenu {
         }
         // TODO(P1): không cho xóa Customer đại diện khi còn Booking đang hiệu lực (cần BookingManager của P3)
     }
- 
+
     // ============================================================
     // P1: TÀI KHOẢN CỦA TÔI, HỆ THỐNG
     // ============================================================
@@ -964,10 +988,10 @@ public class ConsoleMenu {
             printTitle("TÀI KHOẢN CỦA TÔI");
             printMenu("1. Xem thông tin", "2. Đổi mật khẩu");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             switch (choice) {
                 case 1:
                     System.out.println("Tên đăng nhập : " + currentUser.getUsername());
@@ -981,7 +1005,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // Hệ thống / Cá nhân: lưu dữ liệu, đổi mật khẩu; riêng ADMIN có thêm nhật ký, sao lưu
     private void showSystemMenu() {
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
@@ -990,10 +1014,10 @@ public class ConsoleMenu {
             printMenu("1. Lưu dữ liệu", "2. Đổi mật khẩu", isAdmin ? "3. Nhật ký thao tác" : null,
                     isAdmin ? "4. Sao lưu và khôi phục dữ liệu" : null, isAdmin ? "5. Nạp dữ liệu mẫu" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1:
@@ -1014,7 +1038,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private void changePassword(Account acc, boolean allowCancel) {
         while (true) {
             System.out.print("Mật khẩu mới (tối thiểu 8 ký tự" + (allowCancel ? ", 0 để hủy" : "") + "): ");
@@ -1029,13 +1053,13 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ############################################################
     // KHUNG MENU CỦA P2, P3, P4, P5
     // Chủ module chỉ cần thay dòng notReady(...) bằng lệnh gọi Manager của mình.
     // Giữ nguyên tên hàm và cấu trúc vòng lặp để menu chính không bị gãy.
     // ############################################################
- 
+
     // ---------- MODULE P2: PHÒNG ----------
     private void showRoomMenu() {
         while (true) {
@@ -1044,10 +1068,10 @@ public class ConsoleMenu {
                     canEdit() ? "4. Sửa phòng" : null, canEdit() ? "5. Xóa phòng" : null,
                     canEdit() ? "6. Đổi giá phòng" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách phòng"); break;   // TODO(P2)
@@ -1075,7 +1099,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ---------- MODULE P2: DỊCH VỤ ----------
     private void showServiceMenu() {
         while (true) {
@@ -1083,10 +1107,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách dịch vụ", canEdit() ? "2. Thêm dịch vụ" : null,
                     canEdit() ? "3. Sửa dịch vụ" : null, canEdit() ? "4. Ngưng cung cấp dịch vụ" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách dịch vụ"); break;   // TODO(P2)
@@ -1109,7 +1133,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ---------- MODULE P2: BẢO TRÌ PHÒNG ----------
     private void showMaintenanceMenu() {
         while (true) {
@@ -1117,10 +1141,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách bảo trì", "2. Tạo bản ghi bảo trì (báo hỏng)",
                     canEdit() ? "3. Đóng bản ghi bảo trì" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách bảo trì"); break;   // TODO(P2)
@@ -1136,7 +1160,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ---------- MODULE P3: ĐẶT PHÒNG ----------
     private void showBookingMenu() {
         while (true) {
@@ -1145,10 +1169,10 @@ public class ConsoleMenu {
                     "3. Đặt phòng trực tiếp - đoàn", "4. Sửa đặt phòng", "5. Hủy đặt phòng",
                     "6. Thu cọc", "7. Gửi đề nghị hủy (chờ quản lý duyệt)");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Nhận yêu cầu đặt phòng qua điện thoại"); break;   // TODO(P3)
@@ -1165,7 +1189,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ---------- MODULE P3: DUYỆT YÊU CẦU ----------
     private void showRequestMenu() {
         if (isEmployeeRole()) {
@@ -1177,10 +1201,10 @@ public class ConsoleMenu {
             printMenu("1. Danh sách đề nghị hủy chờ duyệt", "2. Duyệt hủy phiếu",
                     "3. Quyết định hoàn hoặc mất cọc", "4. Từ chối đề nghị hủy");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Danh sách đề nghị hủy chờ duyệt"); break;   // TODO(P3)
@@ -1194,23 +1218,34 @@ public class ConsoleMenu {
             }
         }
     }
- 
+    // P4 thêm --
     // ---------- MODULE P4: LƯU TRÚ ----------
     private void showStayMenu() {
+        if (stayManager == null) { notReady("Lưu trú (P4)"); return; }
         while (true) {
             printTitle("LƯU TRÚ");
-            printMenu("1. Nhận phòng", "2. Ghi dịch vụ", "3. Đổi phòng", "4. Trả phòng");
+            printMenu("1. Nhận phòng", "2. Ghi dịch vụ", "3. Sửa hoặc hủy dịch vụ", "4. Đổi phòng",
+                    "5. Gia hạn", "6. Trả phòng", "7. Khách không đến (no-show)", "8. Tra cứu và thống kê",
+                    canEdit() ? "9. Xóa lượt ở" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
-                    case 1: notReady("Nhận phòng"); break;   // TODO(P4)
-                    case 2: notReady("Ghi dịch vụ"); break;   // TODO(P4)
-                    case 3: notReady("Đổi phòng"); break;   // TODO(P4)
-                    case 4: notReady("Trả phòng"); break;   // TODO(P4)
+                    case 1: stayCheckIn();      break;
+                    case 2: stayAddUsage();     break;
+                    case 3: stayEditUsage();    break;
+                    case 4: stayChangeRoom();   break;
+                    case 5: stayExtend();       break;
+                    case 6: stayCheckOut();     break;
+                    case 7: stayNoShow();       break;
+                    case 8: stayLookup();       break;
+                    case 9:
+                        if (!canEdit()) noPermission();
+                        else stayRemove();
+                        break;
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1218,7 +1253,121 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
+    private void stayCheckIn() {
+        String code = readNonEmpty("Mã phiếu yêu cầu hoặc mã đặt phòng: ").toUpperCase();
+        StayLinks.BookingLine[] lines = stayManager.getLines(code);
+        if (lines.length == 0) { System.out.println("Không tìm thấy phiếu " + code); return; }
+        System.out.println("Các phòng trong phiếu:");
+        for (StayLinks.BookingLine l : lines) {
+            System.out.printf("  %-6s phòng %-5s %s -> %s, %d khách %s%n", l.bookingDetailId, l.roomId,
+                    l.checkInDate.format(DATE_FORMAT), l.checkOutDate.format(DATE_FORMAT), l.guestCount,
+                    stayManager.hasStayForLine(l.bookingDetailId) ? "[ĐÃ NHẬN]" : "");
+        }
+        String detailId = readNonEmpty("Mã dòng cần nhận phòng: ").toUpperCase();
+        String[] guests = readNonEmpty("Mã khách ở phòng này (cách nhau dấu phẩy): ")
+                .toUpperCase().split("\\s*,\\s*");
+        System.out.print("Ghi chú (có thể bỏ trống): ");
+        String note = sc.nextLine().trim();
+
+        StayRecord s = stayManager.checkIn(code, detailId, guests, currentUser.getEmployeeId(), note);
+        System.out.println("Nhận phòng thành công, lượt ở " + s.getStayId());
+        stayManager.findCheckInReceipt(s.getStayId()).printReceipt();
+    }
+
+    private void stayAddUsage() {
+        String stayId = readNonEmpty("Mã lượt ở: ").toUpperCase();
+        String serviceId = readNonEmpty("Mã dịch vụ: ").toUpperCase();
+        double qty = readNonNegativeDouble("Số lượng: ");
+        ServiceUsage u = stayManager.addServiceUsage(stayId, serviceId, qty, currentUser.getEmployeeId());
+        System.out.println("Đã ghi: " + u);
+    }
+
+    private void stayEditUsage() {
+        String stayId = readNonEmpty("Mã lượt ở: ").toUpperCase();
+        stayManager.displayUsages(stayId);
+        String usageId = readNonEmpty("Mã dòng dịch vụ: ").toUpperCase();
+        item("1. Sửa số lượng   2. Hủy dòng");
+        int c = readChoice();
+        if (c == 1) {
+            stayManager.updateServiceUsage(stayId, usageId, readNonNegativeDouble("Số lượng mới: "));
+            System.out.println("Đã sửa.");
+        } else if (c == 2) {
+            if (!confirm("Hủy dòng " + usageId + "?")) return;
+            boolean needP5 = stayManager.cancelServiceUsage(stayId, usageId, currentUser.getRole());
+            System.out.println("Đã hủy." + (needP5 ? " Hóa đơn đã lập: cần P5 điều chỉnh hoặc hoàn tiền." : ""));
+        } else {
+            System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    private void stayChangeRoom() {
+        String stayId = readNonEmpty("Mã lượt ở: ").toUpperCase();
+        String room = readNonEmpty("Mã phòng mới: ").toUpperCase();
+        String reason = readNonEmpty("Lý do: ");
+        if (!confirm("Đổi phòng?")) return;
+        StayRecord s = stayManager.changeRoom(stayId, room, currentUser.getEmployeeId(), reason);
+        System.out.println("Đã đổi phòng, lượt ở mới " + s.getStayId());
+    }
+
+    private void stayExtend() {
+        String stayId = readNonEmpty("Mã lượt ở: ").toUpperCase();
+        LocalDate d = readDate("Ngày trả mới (dd/MM/yyyy): ");
+        System.out.println(stayManager.extendStay(stayId, d, currentUser.getEmployeeId())
+                ? "Đã gia hạn." : "Không gia hạn được (phòng đã có người đặt kế tiếp).");
+    }
+
+    private void stayCheckOut() {
+        String stayId = readNonEmpty("Mã lượt ở: ").toUpperCase();
+        String cond = readNonEmpty("Tình trạng phòng: ");
+        System.out.print("Ghi chú (có thể bỏ trống): ");
+        String note = sc.nextLine().trim();
+        if (!confirm("Trả phòng của lượt ở " + stayId + "?")) return;
+
+        StayManager.CheckOutResult r = stayManager.checkOut(stayId, currentUser.getEmployeeId(), cond, note);
+        r.receipt.printReceipt();
+        System.out.println(r.invoiceId == null ? "Chưa có hóa đơn." : "Mã hóa đơn: " + r.invoiceId);
+        if (r.bookingCompleted) System.out.println("Tất cả phòng của Booking đã trả: Booking COMPLETED.");
+        if (r.warning != null) System.out.println("[CẢNH BÁO] " + r.warning);
+    }
+
+    private void stayNoShow() {
+        String code = readNonEmpty("Mã phiếu yêu cầu hoặc mã đặt phòng: ").toUpperCase();
+        if (!confirm("Đánh dấu NO_SHOW cho " + code + "? (tiền cọc sẽ do quản lý xử lý)")) return;
+        stayManager.processNoShow(code, currentUser.getEmployeeId());
+        System.out.println("Đã chuyển NO_SHOW.");
+    }
+
+    private void stayLookup() {
+        printMenu("1. Khách đang ở", "2. Tìm kiếm", "3. Lịch sử lưu trú theo khách",
+                "4. Dịch vụ của một lượt ở", "5. Tất cả (mới nhất trước)", "6. Thống kê",
+                "7. Xem phiếu của một lượt ở");
+        switch (readChoice()) {
+            case 1: stayManager.displayActiveGuests(); break;
+            case 2: stayManager.displayList(stayManager.search(readNonEmpty("Từ khóa: "))); break;
+            case 3: stayManager.displayList(stayManager.findByGuest(readNonEmpty("Mã khách: ").toUpperCase())); break;
+            case 4: stayManager.displayUsages(readNonEmpty("Mã lượt ở: ").toUpperCase()); break;
+            case 5: stayManager.displayList(stayManager.sortedByCheckIn(true)); break;
+            case 6: stayManager.printStatistics(); break;
+            case 7:
+                String id = readNonEmpty("Mã lượt ở: ").toUpperCase();
+                CheckInReceipt ci = stayManager.findCheckInReceipt(id);
+                CheckOutReceipt co = stayManager.findCheckOutReceipt(id);
+                if (ci != null) ci.printReceipt(); else System.out.println("(Chưa có phiếu nhận)");
+                if (co != null) co.printReceipt(); else System.out.println("(Chưa có phiếu trả)");
+                break;
+            default: System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    private void stayRemove() {
+        String id = readNonEmpty("Mã lượt ở cần xóa: ").toUpperCase();
+        if (!confirm("Xóa lượt ở " + id + " cùng phiếu và dịch vụ kèm theo?")) return;
+        System.out.println(stayManager.remove(id) ? "Đã xóa."
+                : "Không xóa được (không tồn tại, đang ở, hoặc đã có hóa đơn).");
+    }
+    // P4 hết --
+
     // ---------- MODULE P5: THANH TOÁN ----------
     private void showPaymentMenu() {
         while (true) {
@@ -1227,10 +1376,10 @@ public class ConsoleMenu {
                     canEdit() ? "5. Áp giảm giá" : null, canEdit() ? "6. Hủy hóa đơn" : null,
                     canEdit() ? "7. Hoàn tiền" : null);
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Lập hóa đơn"); break;   // TODO(P5)
@@ -1256,7 +1405,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ---------- MODULE P5: THỐNG KÊ VÀ BÁO CÁO ----------
     private void showReportMenu() {
         if (isEmployeeRole()) {
@@ -1267,10 +1416,10 @@ public class ConsoleMenu {
             printTitle("THỐNG KÊ VÀ BÁO CÁO");
             printMenu("1. Doanh thu theo kỳ", "2. Công suất phòng", "3. Dịch vụ bán chạy");
             item("0. Quay lại");
- 
+
             int choice = readChoice();
             if (choice == 0) return;
- 
+
             try {
                 switch (choice) {
                     case 1: notReady("Doanh thu theo kỳ"); break;   // TODO(P5)
@@ -1283,11 +1432,11 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // ============================================================
     // HÀM NHẬP LIỆU DÙNG CHUNG (sai thì báo lỗi rồi hỏi lại)
     // ============================================================
- 
+
     private String pad() {
         return INDENT.repeat(depth);
     }
@@ -1337,24 +1486,24 @@ public class ConsoleMenu {
         System.out.println();
         System.out.println(pad() + "=".repeat(left) + text + "=".repeat(right));
     }
- 
+
     private void notReady(String featureName) {      // dùng cho chức năng chưa có người viết
         System.out.println("[Đang phát triển] " + featureName);
     }
- 
+
     private void noPermission() {
         System.out.println("Bạn không có quyền sử dụng chức năng này.");
     }
- 
+
     private boolean isEmployeeRole() {
         return currentUser.getRole() == Role.EMPLOYEE;
     }
- 
+
     // true nếu được phép thêm/sửa/xóa (EMPLOYEE chỉ xem)
     private boolean canEdit() {
         return currentUser.getRole() != Role.EMPLOYEE;
     }
- 
+
     // Đọc số nguyên cho lựa chọn menu. Gõ chữ thì hỏi lại.
     private int readChoice() {
         while (true) {
@@ -1367,7 +1516,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private String readNonEmpty(String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -1376,7 +1525,7 @@ public class ConsoleMenu {
             System.out.println("Không được để trống.");
         }
     }
- 
+
     private double readNonNegativeDouble(String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -1392,7 +1541,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private LocalDate readDate(String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -1404,7 +1553,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private Gender readGender() {
         while (true) {
             System.out.print("Giới tính (1. Nam, 2. Nữ, 3. Khác): ");
@@ -1415,7 +1564,7 @@ public class ConsoleMenu {
             System.out.println("Chỉ nhập 1, 2 hoặc 3.");
         }
     }
- 
+
     private Role readRole() {
         while (true) {
             System.out.print("Quyền (1. ADMIN, 2. MANAGER, 3. EMPLOYEE): ");
@@ -1426,7 +1575,7 @@ public class ConsoleMenu {
             System.out.println("Chỉ nhập 1, 2 hoặc 3.");
         }
     }
- 
+
     private String readPhone() {
         while (true) {
             System.out.print("SĐT: ");
@@ -1439,7 +1588,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     private String readIdentity() {
         while (true) {
             System.out.print("CCCD/Hộ chiếu: ");
@@ -1478,7 +1627,7 @@ public class ConsoleMenu {
             }
         }
     }
- 
+
     // Hỏi có/không cho thao tác nguy hiểm (xóa, hủy...)
     private boolean confirm(String question) {
         while (true) {
