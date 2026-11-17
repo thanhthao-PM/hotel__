@@ -19,7 +19,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class AccountManager implements IManager<Account>, IFileHandler {
-    private static final String FILE_PATH = "data/account.txt";
+    private static final String FILE_PATH = "file/account.txt";
     private static final int INITIAL_CAPACITY = 10;
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "admin123";   // phải đủ độ dài tối thiểu

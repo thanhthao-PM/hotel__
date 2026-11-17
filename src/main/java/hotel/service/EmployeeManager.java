@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 
 public class EmployeeManager implements IManager<Employee>, IFileHandler{
 
-    private static final String FILE_PATH = "data/employee.txt";
+    private static final String FILE_PATH = "file/employee.txt";
     private static final int INITIAL_CAPACITY = 10;
 
     private Employee[] items;

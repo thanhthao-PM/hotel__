@@ -17,7 +17,7 @@ import java.nio.file.Paths;
 
 public class CustomerManager implements IManager<Person>, IFileHandler {
 
-    private static final String FILE_PATH = "data/customer.txt";
+    private static final String FILE_PATH = "file/customer.txt";
     private static final int INITIAL_CAPACITY = 10;
 
     private Person[] items;
