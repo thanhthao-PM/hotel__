@@ -124,13 +124,13 @@ public class BookingManager {
     public Deposit processDeposit(String requestId, double amount, PaymentMethod method, 
                                   String receivedBy, String referenceNo) {
         BookingRequest req = findRequestById(requestId);
+        if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT) {
+            return null;
+        }
         // số tiền cọc phải dương (chặn sớm, trước khi tạo mã cọc và đổi dữ liệu)
         CheckingExpression.checkPositiveDouble(amount, "Số tiền cọc phải > 0");
         // phiếu chưa có dòng phòng nào thì chia cọc sẽ ra Infinity hoặc NaN
         CheckingExpression.checkDivideByZero(req.getDetailCount(), "Phiếu yêu cầu chưa có phòng nào để chia tiền cọc");
-        if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT) {
-            return null;
-        }
 
         // Tạo phiếu cọc mới
         String depositId = generateDepositId();
@@ -162,6 +162,14 @@ public class BookingManager {
             }
         }
         return null;
+    }
+
+    /**
+     * Lấy toàn bộ phiếu yêu cầu (bản sao, không sửa được danh sách gốc). P4 dùng để tra BookingDetail.
+     */
+
+    public List<BookingRequest> getAllRequests() {
+        return requestList.getAll();
     }
 
     /**
@@ -223,7 +231,7 @@ public class BookingManager {
         }
 
         if (addBooking(booking)) {
-            req.expire();
+            req.markConverted();
             return booking;
         }
         return null;
