@@ -39,4 +39,11 @@ public class Payment {
     public double getAmount() { 
         return amount; 
     }
+
+    public String getPaymentId() { return paymentId; }
+    public String getInvoiceId() { return invoiceId; }
+    public Invoice.PaymentMethod getMethod() { return method; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public String getReceivedBy() { return receivedBy; }
+    public String getReferenceNo() { return referenceNo; }
 }

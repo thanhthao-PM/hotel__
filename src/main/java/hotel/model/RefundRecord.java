@@ -35,4 +35,10 @@ public class RefundRecord {
     public double getAmount() { 
         return amount; 
     }
+
+    public String getRefundId() { return refundId; }
+    public String getInvoiceId() { return invoiceId; }
+    public String getReason() { return reason; }
+    public LocalDateTime getRefundedAt() { return refundedAt; }
+    public String getApprovedBy() { return approvedBy; }
 }
