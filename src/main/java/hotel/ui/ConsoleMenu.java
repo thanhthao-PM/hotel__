@@ -11,6 +11,19 @@ import hotel.service.AccountManager;
 import hotel.service.CustomerManager;
 import hotel.service.EmployeeManager;
 import hotel.util.CheckingExpression;
+
+// [P2] import các class của P2 dùng trong menu Phòng, Dịch vụ, Bảo trì
+import hotel.model.FoodService;
+import hotel.model.HotelService;
+import hotel.model.LaundryService;
+import hotel.model.Room;
+import hotel.model.SpaService;
+import hotel.model.StandardRoom;
+import hotel.model.VIPRoom;
+import hotel.model.enums.RoomStatus;
+import hotel.service.RoomManager;
+import hotel.service.ServiceManager;
+import hotel.util.Validator;
  
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,7 +39,8 @@ import java.util.Scanner;
  *   run()            -> vòng lặp chính: đăng nhập -> menu theo Role -> đăng xuất
  *   showAdminMenu / showManagerMenu / showEmployeeMenu   -> menu chính của từng Role (có switch-case)
  *   Phần "P1"        -> menu con của module Người, Tài khoản (đã làm)
- *   Phần "KHUNG P2..P5" -> menu con của các bạn khác: chỉ cần thay notReady(...) bằng lệnh gọi Manager của mình
+ *   Phần "P2"        -> menu Phòng, Dịch vụ, Bảo trì phòng (đã làm)
+ *   Phần "KHUNG P3..P5" -> menu con của các bạn khác: chỉ cần thay notReady(...) bằng lệnh gọi Manager của mình
  *   Cuối file        -> các hàm nhập liệu dùng chung
  */
 public class ConsoleMenu {
@@ -40,17 +54,25 @@ public class ConsoleMenu {
     private final AccountManager accountManager;
     private final EmployeeManager employeeManager;
     private final CustomerManager customerManager;
-    // TODO(P2..P5): thêm RoomManager, BookingManager... vào đây và vào constructor
+    // [P2] hai Manager của P2 (phòng + bảo trì, dịch vụ); MainApp truyền đúng object đã nạp file
+    private final RoomManager roomManager;
+    private final ServiceManager serviceManager;
+    // TODO(P3..P5): thêm BookingManager... vào đây và vào constructor
  
     private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
     private int depth = 0;
  
+    // [P2] constructor nhận thêm roomManager và serviceManager
     public ConsoleMenu(AccountManager accountManager,
                        EmployeeManager employeeManager,
-                       CustomerManager customerManager) {
+                       CustomerManager customerManager,
+                       RoomManager roomManager,
+                       ServiceManager serviceManager) {
         this.accountManager = accountManager;
         this.employeeManager = employeeManager;
         this.customerManager = customerManager;
+        this.roomManager = roomManager;
+        this.serviceManager = serviceManager;
     }
  
     // ============================================================
@@ -99,10 +121,13 @@ public class ConsoleMenu {
         }
     }
  
+    // [P2] thêm ghi file phòng (kèm bảo trì) và dịch vụ khi lưu dữ liệu
     private void saveAll() {
         employeeManager.writeFile();
         accountManager.writeFile();
         customerManager.writeFile();
+        roomManager.writeFile();
+        serviceManager.writeFile();
     }
  
     // ============================================================
@@ -278,7 +303,11 @@ public class ConsoleMenu {
  
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách phòng (P2)");        break;   // TODO(P2): roomManager.displayAll()
+                    // [P2] Mục 1: mở menu Phòng (EMPLOYEE chỉ thấy các mục xem, tìm, dọn phòng, báo hỏng)
+                    case 1:
+                        openSub(this::showRoomMenu);
+                        break;
+
                     case 2: openSub(() -> showPostListMenu(false));    break;
                     case 3:
                         if (isEmployeeRole()) noPermission();          // kiểm tra quyền ngay trong xử lý, không chỉ ẩn menu
@@ -287,7 +316,12 @@ public class ConsoleMenu {
                     case 4: notReady("Danh sách đặt phòng (P3)");    break;   // TODO(P3)
                     case 5: notReady("Khách đang lưu trú (P4)");     break;   // TODO(P4)
                     case 6: notReady("Danh sách hóa đơn (P5)");      break;   // TODO(P5)
-                    case 7: notReady("Danh sách dịch vụ (P2)");      break;   // TODO(P2)
+
+                    // [P2] Mục 7: mở menu Dịch vụ (EMPLOYEE chỉ xem)
+                    case 7:
+                        openSub(this::showServiceMenu);
+                        break;
+
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1031,111 +1065,879 @@ public class ConsoleMenu {
     }
  
     // ############################################################
-    // KHUNG MENU CỦA P2, P3, P4, P5
-    // Chủ module chỉ cần thay dòng notReady(...) bằng lệnh gọi Manager của mình.
-    // Giữ nguyên tên hàm và cấu trúc vòng lặp để menu chính không bị gãy.
     // ############################################################
- 
-    // ---------- MODULE P2: PHÒNG ----------
+    //                    PHẦN CỦA P2 (BẮT ĐẦU)
+    //        Menu Phòng, Menu Dịch vụ, Menu Bảo trì phòng
+    // ############################################################
+    // ############################################################
+
+    // ============================================================
+    // [P2] MENU PHÒNG
+    // Mọi Role: xem, tìm phòng trống, tìm kiếm, sắp xếp, đổi trạng thái dọn phòng, vào menu bảo trì
+    // Chỉ ADMIN và MANAGER: thêm, sửa, xóa, đổi giá
+    // ============================================================
     private void showRoomMenu() {
         while (true) {
             printTitle("PHÒNG");
-            printMenu("1. Danh sách phòng", "2. Tìm phòng trống", canEdit() ? "3. Thêm phòng" : null,
-                    canEdit() ? "4. Sửa phòng" : null, canEdit() ? "5. Xóa phòng" : null,
-                    canEdit() ? "6. Đổi giá phòng" : null);
+
+            // Dựng danh sách mục menu: mục nào cần quyền thì chỉ thêm khi canEdit() = true
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách phòng");
+            menuItems.add("2. Tìm phòng trống");
+            menuItems.add("3. Tìm kiếm / lọc");
+            menuItems.add("4. Sắp xếp theo giá");
+            menuItems.add("5. Đổi trạng thái (dọn phòng)");
+            if (canEdit()) {
+                menuItems.add("6. Thêm phòng");
+                menuItems.add("7. Sửa phòng");
+                menuItems.add("8. Xóa phòng");
+                menuItems.add("9. Đổi giá phòng");
+            }
+            menuItems.add("10. Bảo trì phòng");
+
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
- 
+
             int choice = readChoice();
-            if (choice == 0) return;
- 
+            if (choice == 0) {
+                return;
+            }
+
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách phòng"); break;   // TODO(P2)
-                    case 2: notReady("Tìm phòng trống"); break;   // TODO(P2)
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Thêm phòng");   // TODO(P2)
-                        break;
-                    case 4:
-                        if (!canEdit()) noPermission();
-                        else notReady("Sửa phòng");   // TODO(P2)
-                        break;
-                    case 5:
-                        if (!canEdit()) noPermission();
-                        else notReady("Xóa phòng");   // TODO(P2)
-                        break;
+                    case 1: roomManager.displayAll();   break;
+                    case 2: findFreeRooms();    break;
+                    case 3: searchRooms();  break;
+                    case 4: sortRooms();    break;
+                    case 5: changeRoomStatus(); break;
+                    // Kiểm tra quyền ngay trong xử lý, không chỉ dựa vào việc ẩn menu
                     case 6:
-                        if (!canEdit()) noPermission();
-                        else notReady("Đổi giá phòng");   // TODO(P2)
+                        if (canEdit()) {    addRoom();  }
+                        else {  noPermission(); }
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+                    case 7:
+                        if (canEdit()) {    editRoom(); }
+                        else {  noPermission(); }
+                        break;
+                    case 8:
+                        if (canEdit()) {    removeRoom();   }
+                        else {  noPermission(); }
+                        break;
+                    case 9:
+                        if (canEdit()) { changeRoomPrice(); }
+                        else {  noPermission(); }
+                        break;
+                    case 10:    openSub(this::showMaintenanceMenu);     break;
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
             }
         }
     }
- 
-    // ---------- MODULE P2: DỊCH VỤ ----------
+
+    // [P2] Tìm phòng dùng được trong khoảng ngày (còn hoạt động, không bảo trì)
+    // Việc trùng đơn đặt phòng do P3 kiểm tra thêm
+    private void findFreeRooms() {
+        LocalDate checkInDate = readDate("Ngày nhận (dd/MM/yyyy): ");
+        LocalDate checkOutDate = readDate("Ngày trả (dd/MM/yyyy): ");
+
+        // Ngày trả phải sau ngày nhận, sai thì ném lỗi và menu bắt lại
+        CheckingExpression.checkValidDateRange(checkInDate, checkOutDate);
+
+        ArrayList<Room> freeRooms = roomManager.findAvailableRooms(checkInDate, checkOutDate);
+        roomManager.displayList(freeRooms);
+    }
+
+    // [P2] Tìm kiếm / lọc phòng theo loại, trạng thái, khoảng giá hoặc số phòng
+    private void searchRooms() {
+        item("Tìm theo:");
+        printMenu("1. Loại phòng", "2. Trạng thái", "3. Khoảng giá", "4. Số phòng");
+        int searchChoice = readChoice();
+
+        switch (searchChoice) {
+            case 1:     searchRoomsByType();    break;
+            case 2: {
+                RoomStatus status = readRoomStatus();
+                roomManager.displayList(roomManager.findByStatus(status));
+                break;
+            }
+            case 3:     searchRoomsByPrice();   break;
+            case 4:     searchRoomByNumber();   break;
+            default:
+                System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Lọc phòng theo loại: VIP hoặc STANDARD
+    private void searchRoomsByType() {
+        item("1. VIP   2. STANDARD");
+        int typeChoice = readChoice();
+
+        if (typeChoice == 1) {
+            roomManager.displayList(roomManager.findByType("VIP"));
+        } else if (typeChoice == 2) {
+            roomManager.displayList(roomManager.findByType("STANDARD"));
+        } else {
+            System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Lọc phòng theo khoảng giá gốc một đêm
+    private void searchRoomsByPrice() {
+        double minPrice = Validator.inputDouble(sc, "Giá gốc từ: ", 0);
+        double maxPrice = Validator.inputDouble(sc, "Đến: ", minPrice);
+        roomManager.displayList(roomManager.findByPriceRange(minPrice, maxPrice));
+    }
+
+    // [P2] Tìm một phòng theo số phòng, rồi in kết quả (0 hoặc 1 phòng)
+    private void searchRoomByNumber() {
+        String roomNumber = readNonEmpty("Số phòng: ");
+        Room room = roomManager.findByRoomNumber(roomNumber);
+
+        ArrayList<Room> result = new ArrayList<>();
+        if (room != null) {
+            result.add(room);
+        }
+        roomManager.displayList(result);
+    }
+
+    // [P2] Sắp xếp phòng theo giá gốc (tăng hoặc giảm) rồi in
+    private void sortRooms() {
+        item("1. Giá tăng dần   2. Giá giảm dần");
+        int sortChoice = readChoice();
+
+        if (sortChoice == 1) {
+            roomManager.displayList(roomManager.sortByPrice(true));
+        } else if (sortChoice == 2) {
+            roomManager.displayList(roomManager.sortByPrice(false));
+        } else {
+            System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Đổi trạng thái phòng qua RoomManager
+    // ADMIN và MANAGER đổi được mọi trạng thái hợp lệ
+    // EMPLOYEE chỉ được báo "dọn xong" (CLEANING -> AVAILABLE)
+    private void changeRoomStatus() {
+        Room room = readExistingRoom();
+        if (room == null) {
+            return;
+        }
+
+        System.out.println("Trạng thái hiện tại: " + room.getStatus());
+        RoomStatus newStatus = readRoomStatus();
+
+        // Kiểm tra đây có phải thao tác "dọn xong" không
+        boolean isCleaningDone = (room.getStatus() == RoomStatus.CLEANING
+                && newStatus == RoomStatus.AVAILABLE);
+
+        // Nhân viên chỉ được làm thao tác dọn xong
+        if (isEmployeeRole() && !isCleaningDone) {
+            noPermission();
+            return;
+        }
+
+        boolean changed = roomManager.changeRoomStatus(room.getRoomId(), newStatus);
+        if (changed) {
+            System.out.println("Đã đổi trạng thái.");
+        }
+    }
+
+    // [P2] Thêm phòng mới: hỏi loại phòng, đọc thông tin chung, rồi đọc thông tin riêng của từng loại
+    private void addRoom() {
+        printTitle("THÊM PHÒNG");
+        item("Loại phòng: 1. VIP   2. Standard");
+        int typeChoice = readChoice();
+
+        if (typeChoice != 1 && typeChoice != 2) {
+            System.out.println("Lựa chọn không hợp lệ.");
+            return;
+        }
+
+        // Thông tin chung của mọi loại phòng
+        String roomNumber = Validator.inputString(sc, "Số phòng: ");
+        int floor = Validator.inputInt(sc, "Tầng: ", 0, 100);
+        int capacity = Validator.inputInt(sc, "Sức chứa: ", 1, 20);
+        double basePrice = Validator.inputDouble(sc, "Giá gốc một đêm: ", 1);
+
+        String newRoomId = Room.generateId();
+        Room newRoom;
+
+        if (typeChoice == 1) {
+            // Thông tin riêng của phòng VIP
+            double surchargeRate = Validator.inputDouble(sc, "Hệ số phụ thu (VD 0.3 = 30%): ", 0);
+            String amenities = Validator.inputString(sc, "Tiện nghi: ");
+            String viewType = Validator.inputString(sc, "Hướng nhìn: ");
+
+            newRoom = new VIPRoom(newRoomId, roomNumber, floor, capacity, basePrice,
+                    RoomStatus.AVAILABLE, true, surchargeRate, amenities, viewType);
+        } else {
+            // Thông tin riêng của phòng Standard
+            String bedType = Validator.inputString(sc, "Loại giường: ");
+            int bedCount = Validator.inputInt(sc, "Số giường: ", 1, 10);
+
+            newRoom = new StandardRoom(newRoomId, roomNumber, floor, capacity, basePrice,
+                    RoomStatus.AVAILABLE, true, bedType, bedCount);
+        }
+
+        boolean added = roomManager.add(newRoom);
+        if (added) {
+            System.out.println("Đã thêm phòng " + newRoom.getRoomId() + ".");
+        }
+    }
+
+    // [P2] Sửa phòng: chọn phòng rồi sửa từng trường
+    // Không đổi loại phòng, không đổi trạng thái; giá có mục riêng (Đổi giá phòng)
+    private void editRoom() {
+        Room room = readExistingRoom();
+        if (room == null) {
+            return;
+        }
+
+        while (true) {
+            printTitle("SỬA PHÒNG " + room.getRoomId() + " - " + room.getRoomNumber());
+
+            // Mục 1 đến 3 là chung; mục 4 trở đi tùy loại phòng
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Số phòng");
+            menuItems.add("2. Tầng");
+            menuItems.add("3. Sức chứa");
+            if (room instanceof VIPRoom) {
+                menuItems.add("4. Hệ số phụ thu");
+                menuItems.add("5. Tiện nghi");
+                menuItems.add("6. Hướng nhìn");
+            } else {
+                menuItems.add("4. Loại giường");
+                menuItems.add("5. Số giường");
+            }
+            printMenu(menuItems.toArray(new String[0]));
+            item("0. Quay lại");
+
+            int choice = readChoice();
+            if (choice == 0) {
+                return;
+            }
+
+            try {
+                boolean updated;
+                if (choice >= 1 && choice <= 3) {
+                    updated = editCommonRoomField(room, choice);
+                } else if (room instanceof VIPRoom) {
+                    updated = editVipRoomField((VIPRoom) room, choice);
+                } else {
+                    updated = editStandardRoomField((StandardRoom) room, choice);
+                }
+
+                if (updated) {
+                    System.out.println("Đã cập nhật.");
+                } else {
+                    System.out.println("Không cập nhật được (lựa chọn không hợp lệ hoặc số phòng bị trùng).");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    // [P2] Sửa trường chung của phòng: 1 = số phòng, 2 = tầng, 3 = sức chứa. Trả về true nếu đã sửa
+    private boolean editCommonRoomField(Room room, int choice) {
+        if (choice == 1) {
+            String newNumber = Validator.inputString(sc, "Số phòng mới: ");
+
+            // Số phòng mới không được trùng với phòng khác
+            Room sameNumberRoom = roomManager.findByRoomNumber(newNumber);
+            boolean usedByOtherRoom = (sameNumberRoom != null
+                    && !sameNumberRoom.getRoomId().equals(room.getRoomId()));
+            if (usedByOtherRoom) {
+                return false;
+            }
+            room.setRoomNumber(newNumber);
+            return true;
+        }
+
+        if (choice == 2) {
+            room.setFloor(Validator.inputInt(sc, "Tầng mới: ", 0, 100));
+            return true;
+        }
+
+        if (choice == 3) {
+            room.setCapacity(Validator.inputInt(sc, "Sức chứa mới: ", 1, 20));
+            return true;
+        }
+
+        return false;
+    }
+
+    // [P2] Sửa trường riêng của phòng VIP: 4 = hệ số phụ thu, 5 = tiện nghi, 6 = hướng nhìn
+    private boolean editVipRoomField(VIPRoom vipRoom, int choice) {
+        if (choice == 4) {
+            vipRoom.setSurchargeRate(Validator.inputDouble(sc, "Hệ số phụ thu mới: ", 0));
+            return true;
+        }
+        if (choice == 5) {
+            vipRoom.setAmenities(Validator.inputString(sc, "Tiện nghi mới: "));
+            return true;
+        }
+        if (choice == 6) {
+            vipRoom.setViewType(Validator.inputString(sc, "Hướng nhìn mới: "));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Sửa trường riêng của phòng Standard: 4 = loại giường, 5 = số giường
+    private boolean editStandardRoomField(StandardRoom standardRoom, int choice) {
+        if (choice == 4) {
+            standardRoom.setBedType(Validator.inputString(sc, "Loại giường mới: "));
+            return true;
+        }
+        if (choice == 5) {
+            standardRoom.setBedCount(Validator.inputInt(sc, "Số giường mới: ", 1, 10));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Xóa mềm phòng (RoomManager chặn khi phòng đang có khách hoặc đã giữ chỗ)
+    private void removeRoom() {
+        Room room = readExistingRoom();
+        if (room == null) {
+            return;
+        }
+
+        boolean confirmed = confirm("Xóa phòng " + room.getRoomNumber() + "?");
+        if (!confirmed) {
+            return;
+        }
+
+        boolean removed = roomManager.remove(room.getRoomId());
+        if (removed) {
+            System.out.println("Đã xóa.");
+        }
+    }
+
+    // [P2] Đổi giá gốc một đêm của phòng
+    private void changeRoomPrice() {
+        Room room = readExistingRoom();
+        if (room == null) {
+            return;
+        }
+
+        System.out.println(String.format("Giá hiện tại: %,.0f", room.getBasePrice()));
+        double newPrice = Validator.inputDouble(sc, "Giá gốc mới: ", 1);
+
+        boolean changed = roomManager.changePrice(room.getRoomId(), newPrice);
+        if (changed) {
+            System.out.println("Đã đổi giá.");
+        }
+    }
+
+    // [P2] Hỏi mã phòng rồi tìm; không thấy thì báo lỗi và trả về null
+    private Room readExistingRoom() {
+        String roomId = readNonEmpty("Mã phòng: ").toUpperCase();
+        Room room = roomManager.findById(roomId);
+
+        if (room == null) {
+            System.out.println("Không tìm thấy phòng " + roomId + ".");
+        }
+        return room;
+    }
+
+    // [P2] Chọn trạng thái phòng từ 1 đến 5 (theo thứ tự enum RoomStatus), nhập sai thì hỏi lại
+    private RoomStatus readRoomStatus() {
+        RoomStatus[] allStatuses = RoomStatus.values();
+
+        while (true) {
+            item("Trạng thái:");
+            printMenu("1. AVAILABLE (Trống)", "2. BOOKED (Đã giữ chỗ)", "3. OCCUPIED (Đang ở)",
+                    "4. CLEANING (Đang dọn)", "5. MAINTENANCE (Bảo trì)");
+            int statusChoice = readChoice();
+
+            if (statusChoice >= 1 && statusChoice <= allStatuses.length) {
+                return allStatuses[statusChoice - 1];
+            }
+            System.out.println("Chỉ nhập từ 1 đến " + allStatuses.length + ".");
+        }
+    }
+
+    // ============================================================
+    // [P2] MENU DỊCH VỤ
+    // Mọi Role: xem, tìm kiếm, sắp xếp
+    // Chỉ ADMIN và MANAGER: thêm, sửa, đổi giá, ngưng cung cấp, cung cấp lại
+    // ============================================================
     private void showServiceMenu() {
         while (true) {
             printTitle("DỊCH VỤ");
-            printMenu("1. Danh sách dịch vụ", canEdit() ? "2. Thêm dịch vụ" : null,
-                    canEdit() ? "3. Sửa dịch vụ" : null, canEdit() ? "4. Ngưng cung cấp dịch vụ" : null);
+
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách dịch vụ");
+            menuItems.add("2. Tìm kiếm");
+            menuItems.add("3. Sắp xếp theo giá");
+            if (canEdit()) {
+                menuItems.add("4. Thêm dịch vụ");
+                menuItems.add("5. Sửa dịch vụ");
+                menuItems.add("6. Đổi đơn giá");
+                menuItems.add("7. Ngưng cung cấp");
+                menuItems.add("8. Cung cấp lại");
+            }
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
- 
+
             int choice = readChoice();
-            if (choice == 0) return;
- 
+            if (choice == 0) {
+                return;
+            }
+
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách dịch vụ"); break;   // TODO(P2)
-                    case 2:
-                        if (!canEdit()) noPermission();
-                        else notReady("Thêm dịch vụ");   // TODO(P2)
-                        break;
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Sửa dịch vụ");   // TODO(P2)
-                        break;
+                    case 1:     serviceManager.displayAll();    break;
+                    case 2:     searchServices();   break;
+                    case 3:     sortServices();     break;
+                    // Kiểm tra quyền ngay trong xử lý: EMPLOYEE chỉ được xem
                     case 4:
-                        if (!canEdit()) noPermission();
-                        else notReady("Ngưng cung cấp dịch vụ");   // TODO(P2)
+                        if (canEdit()) {    addService();   }
+                        else {      noPermission();  }
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+                    case 5:
+                        if (canEdit()) {    editService();  }
+                        else {   noPermission();}
+                        break;
+                    case 6:
+                        if (canEdit()) {
+                            changeServicePrice();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    case 7:
+                        if (canEdit()) {
+                            deactivateService();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    case 8:
+                        if (canEdit()) {
+                            activateService();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
             }
         }
     }
- 
-    // ---------- MODULE P2: BẢO TRÌ PHÒNG ----------
+
+    // [P2] Tìm dịch vụ theo tên (gần đúng), theo loại, hoặc chỉ lấy dịch vụ đang cung cấp
+    private void searchServices() {
+        item("Tìm theo:");
+        printMenu("1. Tên", "2. Loại dịch vụ", "3. Đang cung cấp");
+        int searchChoice = readChoice();
+
+        switch (searchChoice) {
+            case 1: {
+                String keyword = Validator.inputString(sc, "Nhập tên: ");
+                serviceManager.displayList(serviceManager.findByName(keyword));
+                break;
+            }
+
+            case 2:
+                searchServicesByType();
+                break;
+
+            case 3:
+                serviceManager.displayList(serviceManager.findAvailable());
+                break;
+
+            default:
+                System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Lọc dịch vụ theo loại: FOOD, LAUNDRY hoặc SPA
+    private void searchServicesByType() {
+        item("1. FOOD   2. LAUNDRY   3. SPA");
+        int typeChoice = readChoice();
+
+        if (typeChoice == 1) {
+            serviceManager.displayList(serviceManager.findByType("FOOD"));
+        } else if (typeChoice == 2) {
+            serviceManager.displayList(serviceManager.findByType("LAUNDRY"));
+        } else if (typeChoice == 3) {
+            serviceManager.displayList(serviceManager.findByType("SPA"));
+        } else {
+            System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Sắp xếp dịch vụ theo đơn giá (tăng hoặc giảm) rồi in
+    private void sortServices() {
+        item("1. Giá tăng dần   2. Giá giảm dần");
+        int sortChoice = readChoice();
+
+        if (sortChoice == 1) {
+            serviceManager.displayList(serviceManager.sortByPrice(true));
+        } else if (sortChoice == 2) {
+            serviceManager.displayList(serviceManager.sortByPrice(false));
+        } else {
+            System.out.println("Lựa chọn không hợp lệ.");
+        }
+    }
+
+    // [P2] Thêm dịch vụ mới: đọc thông tin chung, rồi tạo đúng loại (Ăn uống, Giặt ủi, Spa)
+    private void addService() {
+        printTitle("THÊM DỊCH VỤ");
+        item("Loại: 1. Ăn uống   2. Giặt ủi   3. Spa");
+        int typeChoice = readChoice();
+
+        if (typeChoice < 1 || typeChoice > 3) {
+            System.out.println("Lựa chọn không hợp lệ.");
+            return;
+        }
+
+        // Thông tin chung của mọi loại dịch vụ
+        String name = Validator.inputString(sc, "Tên dịch vụ: ");
+        double unitPrice = Validator.inputDouble(sc, "Đơn giá: ", 1);
+        String unit = Validator.inputString(sc, "Đơn vị tính (phần, kg, giờ...): ");
+        String description = Validator.inputString(sc, "Mô tả: ");
+        String newServiceId = HotelService.generateId();
+
+        HotelService newService;
+        if (typeChoice == 1) {
+            newService = createFoodService(newServiceId, name, unitPrice, unit, description);
+        } else if (typeChoice == 2) {
+            newService = createLaundryService(newServiceId, name, unitPrice, unit, description);
+        } else {
+            newService = createSpaService(newServiceId, name, unitPrice, unit, description);
+        }
+
+        boolean added = serviceManager.add(newService);
+        if (added) {
+            System.out.println("Đã thêm dịch vụ " + newService.getServiceId() + ".");
+        }
+    }
+
+    // [P2] Đọc thông tin riêng và tạo dịch vụ Ăn uống
+    private FoodService createFoodService(String id, String name, double unitPrice,
+                                          String unit, String description) {
+        String category = Validator.inputString(sc, "Nhóm (đồ ăn sáng, đồ uống...): ");
+        int preparationMinutes = Validator.inputInt(sc, "Thời gian chuẩn bị (phút): ", 0, 600);
+
+        return new FoodService(id, name, unitPrice, unit, description, true,
+                category, preparationMinutes);
+    }
+
+    // [P2] Đọc thông tin riêng và tạo dịch vụ Giặt ủi
+    private LaundryService createLaundryService(String id, String name, double unitPrice,
+                                                String unit, String description) {
+        String chargeBy = readChargeBy();
+        int turnaroundHours = Validator.inputInt(sc, "Thời gian trả đồ (giờ): ", 1, 720);
+
+        return new LaundryService(id, name, unitPrice, unit, description, true,
+                chargeBy, turnaroundHours);
+    }
+
+    // [P2] Đọc thông tin riêng và tạo dịch vụ Spa
+    private SpaService createSpaService(String id, String name, double unitPrice,
+                                        String unit, String description) {
+        String treatmentType = Validator.inputString(sc, "Loại liệu trình: ");
+        int durationMinutes = Validator.inputInt(sc, "Thời lượng (phút): ", 1, 600);
+
+        return new SpaService(id, name, unitPrice, unit, description, true,
+                treatmentType, durationMinutes);
+    }
+
+    // [P2] Sửa dịch vụ: chọn dịch vụ rồi sửa từng trường (giá có mục riêng: Đổi đơn giá)
+    private void editService() {
+        HotelService service = readExistingService();
+        if (service == null) {
+            return;
+        }
+
+        while (true) {
+            printTitle("SỬA DỊCH VỤ " + service.getServiceId() + " - " + service.getName());
+
+            // Mục 1 đến 3 là chung; mục 4 và 5 tùy loại dịch vụ
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Tên");
+            menuItems.add("2. Đơn vị tính");
+            menuItems.add("3. Mô tả");
+            if (service instanceof FoodService) {
+                menuItems.add("4. Nhóm món");
+                menuItems.add("5. Thời gian chuẩn bị");
+            } else if (service instanceof LaundryService) {
+                menuItems.add("4. Cách tính (kg / món)");
+                menuItems.add("5. Thời gian trả đồ");
+            } else {
+                menuItems.add("4. Loại liệu trình");
+                menuItems.add("5. Thời lượng");
+            }
+            printMenu(menuItems.toArray(new String[0]));
+            item("0. Quay lại");
+
+            int choice = readChoice();
+            if (choice == 0) {
+                return;
+            }
+
+            try {
+                boolean updated;
+                if (choice >= 1 && choice <= 3) {
+                    updated = editCommonServiceField(service, choice);
+                } else {
+                    updated = editSpecificServiceField(service, choice);
+                }
+
+                if (updated) {
+                    System.out.println("Đã cập nhật.");
+                } else {
+                    System.out.println("Lựa chọn không hợp lệ.");
+                }
+            } catch (RuntimeException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    // [P2] Sửa trường chung của dịch vụ: 1 = tên, 2 = đơn vị tính, 3 = mô tả. Trả về true nếu đã sửa
+    private boolean editCommonServiceField(HotelService service, int choice) {
+        if (choice == 1) {
+            service.setName(Validator.inputString(sc, "Tên mới: "));
+            return true;
+        }
+        if (choice == 2) {
+            service.setUnit(Validator.inputString(sc, "Đơn vị mới: "));
+            return true;
+        }
+        if (choice == 3) {
+            service.setDescription(Validator.inputString(sc, "Mô tả mới: "));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Sửa trường riêng (mục 4 hoặc 5): kiểm tra dịch vụ thuộc loại nào rồi gọi đúng hàm
+    private boolean editSpecificServiceField(HotelService service, int choice) {
+        if (service instanceof FoodService) {
+            return editFoodServiceField((FoodService) service, choice);
+        }
+        if (service instanceof LaundryService) {
+            return editLaundryServiceField((LaundryService) service, choice);
+        }
+        return editSpaServiceField((SpaService) service, choice);
+    }
+
+    // [P2] Mục 4 = nhóm món, mục 5 = thời gian chuẩn bị (dịch vụ Ăn uống)
+    private boolean editFoodServiceField(FoodService foodService, int choice) {
+        if (choice == 4) {
+            foodService.setCategory(Validator.inputString(sc, "Nhóm món mới: "));
+            return true;
+        }
+        if (choice == 5) {
+            foodService.setPreparationMinutes(
+                    Validator.inputInt(sc, "Thời gian chuẩn bị (phút): ", 0, 600));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Mục 4 = cách tính, mục 5 = thời gian trả đồ (dịch vụ Giặt ủi)
+    private boolean editLaundryServiceField(LaundryService laundryService, int choice) {
+        if (choice == 4) {
+            laundryService.setChargeBy(readChargeBy());
+            return true;
+        }
+        if (choice == 5) {
+            laundryService.setTurnaroundHours(
+                    Validator.inputInt(sc, "Thời gian trả đồ (giờ): ", 1, 720));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Mục 4 = loại liệu trình, mục 5 = thời lượng (dịch vụ Spa)
+    private boolean editSpaServiceField(SpaService spaService, int choice) {
+        if (choice == 4) {
+            spaService.setTreatmentType(Validator.inputString(sc, "Loại liệu trình mới: "));
+            return true;
+        }
+        if (choice == 5) {
+            spaService.setDurationMinutes(Validator.inputInt(sc, "Thời lượng (phút): ", 1, 600));
+            return true;
+        }
+        return false;
+    }
+
+    // [P2] Đổi đơn giá dịch vụ (chỉ áp cho lần dùng sau, hóa đơn cũ không đổi vì ServiceUsage lưu giá lúc dùng)
+    private void changeServicePrice() {
+        HotelService service = readExistingService();
+        if (service == null) {
+            return;
+        }
+
+        System.out.println(String.format("Đơn giá hiện tại: %,.0f", service.getUnitPrice()));
+        double newPrice = Validator.inputDouble(sc, "Đơn giá mới: ", 1);
+
+        boolean changed = serviceManager.changePrice(service.getServiceId(), newPrice);
+        if (changed) {
+            System.out.println("Đã đổi giá.");
+        }
+    }
+
+    // [P2] Ngưng cung cấp dịch vụ (không xóa hẳn để giữ lịch sử hóa đơn)
+    private void deactivateService() {
+        HotelService service = readExistingService();
+        if (service == null) {
+            return;
+        }
+
+        boolean confirmed = confirm("Ngưng cung cấp " + service.getName() + "?");
+        if (!confirmed) {
+            return;
+        }
+
+        serviceManager.deactivateService(service.getServiceId());
+        System.out.println("Đã ngưng cung cấp.");
+    }
+
+    // [P2] Cung cấp lại dịch vụ đã ngưng
+    private void activateService() {
+        HotelService service = readExistingService();
+        if (service == null) {
+            return;
+        }
+
+        serviceManager.activateService(service.getServiceId());
+        System.out.println("Đã cung cấp lại.");
+    }
+
+    // [P2] Hỏi mã dịch vụ rồi tìm; không thấy thì báo lỗi và trả về null
+    private HotelService readExistingService() {
+        String serviceId = readNonEmpty("Mã dịch vụ: ").toUpperCase();
+        HotelService service = serviceManager.findById(serviceId);
+
+        if (service == null) {
+            System.out.println("Không tìm thấy dịch vụ " + serviceId + ".");
+        }
+        return service;
+    }
+
+    // [P2] Chọn cách tính tiền giặt ủi: 1 = theo kg (PER_KG), 2 = theo món (PER_ITEM)
+    private String readChargeBy() {
+        while (true) {
+            item("Tính theo: 1. Kg (PER_KG)   2. Món (PER_ITEM)");
+            int chargeChoice = readChoice();
+
+            if (chargeChoice == 1) {
+                return "PER_KG";
+            }
+            if (chargeChoice == 2) {
+                return "PER_ITEM";
+            }
+            System.out.println("Chỉ nhập 1 hoặc 2.");
+        }
+    }
+
+    // ============================================================
+    // [P2] MENU BẢO TRÌ PHÒNG
+    // Mọi Role: xem danh sách và báo hỏng (tạo bản ghi bảo trì)
+    // Chỉ ADMIN và MANAGER: đóng bản ghi bảo trì
+    // ============================================================
     private void showMaintenanceMenu() {
         while (true) {
             printTitle("BẢO TRÌ PHÒNG");
-            printMenu("1. Danh sách bảo trì", "2. Tạo bản ghi bảo trì (báo hỏng)",
-                    canEdit() ? "3. Đóng bản ghi bảo trì" : null);
+
+            List<String> menuItems = new ArrayList<>();
+            menuItems.add("1. Danh sách bảo trì");
+            menuItems.add("2. Tạo bản ghi bảo trì (báo hỏng)");
+            if (canEdit()) {
+                menuItems.add("3. Đóng bản ghi bảo trì");
+            }
+            printMenu(menuItems.toArray(new String[0]));
             item("0. Quay lại");
- 
+
             int choice = readChoice();
-            if (choice == 0) return;
- 
+            if (choice == 0) {
+                return;
+            }
+
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách bảo trì"); break;   // TODO(P2)
-                    case 2: notReady("Tạo bản ghi bảo trì (báo hỏng)"); break;   // TODO(P2)
-                    case 3:
-                        if (!canEdit()) noPermission();
-                        else notReady("Đóng bản ghi bảo trì");   // TODO(P2)
+                    case 1:
+                        roomManager.displayMaintenances();
                         break;
-                    default: System.out.println("Lựa chọn không hợp lệ.");
+
+                    case 2:
+                        reportMaintenance();
+                        break;
+
+                    case 3:
+                        // EMPLOYEE chỉ được báo hỏng, không được đóng bản ghi
+                        if (canEdit()) {
+                            closeMaintenance();
+                        } else {
+                            noPermission();
+                        }
+                        break;
+
+                    default:
+                        System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
                 System.out.println("Lỗi: " + e.getMessage());
             }
         }
     }
+
+    // [P2] Tạo bản ghi bảo trì; người báo lấy từ tài khoản đang đăng nhập
+    private void reportMaintenance() {
+        Room room = readExistingRoom();
+        if (room == null) {
+            return;
+        }
+
+        LocalDate startDate = readDate("Ngày bắt đầu (dd/MM/yyyy): ");
+        LocalDate endDate = readDate("Ngày kết thúc (dd/MM/yyyy): ");
+        String reason = Validator.inputString(sc, "Lý do: ");
+        String reportedBy = currentUser.getEmployeeId();
+
+        boolean created = roomManager.createMaintenance(room.getRoomId(), startDate, endDate,
+                reason, reportedBy);
+        if (created) {
+            System.out.println("Đã tạo bản ghi bảo trì.");
+        }
+    }
+
+    // [P2] Đóng bản ghi bảo trì; phòng tự về AVAILABLE nếu không còn bảo trì nào hiệu lực
+    private void closeMaintenance() {
+        String maintenanceId = readNonEmpty("Mã bảo trì: ").toUpperCase();
+
+        boolean closed = roomManager.closeMaintenance(maintenanceId);
+        if (closed) {
+            System.out.println("Đã đóng bản ghi bảo trì.");
+        }
+    }
+
+    // ############################################################
+    // ############################################################
+    //                    PHẦN CỦA P2 (KẾT THÚC)
+    // ############################################################
+    // ############################################################
+
+    // ############################################################
+    // KHUNG MENU CỦA P3, P4, P5
+    // Chủ module chỉ cần thay dòng notReady(...) bằng lệnh gọi Manager của mình.
+    // Giữ nguyên tên hàm và cấu trúc vòng lặp để menu chính không bị gãy.
+    // ############################################################
  
     // ---------- MODULE P3: ĐẶT PHÒNG ----------
     private void showBookingMenu() {
