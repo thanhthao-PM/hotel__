@@ -3,8 +3,9 @@ package hotel.service;
 import hotel.model.Invoice;
 import hotel.model.RefundRecord;
 import hotel.util.CheckingExpression;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import hotel.util.FileUtil; // IMPORT THÊM FILE CÔNG CỤ CỦA NHÓM TRƯỞNG
+
+import java.io.IOException;
 
 public class InvoiceManager {
     // Mảng này là cuốn sổ tay chứa TẤT CẢ hóa đơn của khách sạn.
@@ -12,7 +13,7 @@ public class InvoiceManager {
     private int count; // Biến đếm xem khách sạn đang có bao nhiêu hóa đơn rồi
     
     // Đường dẫn file để lưu vào ổ cứng (chứ tắt chương trình là mất hết)
-    private static final String FILE_PATH = "data/invoices.txt"; //[cite: 3]
+    private static final String FILE_PATH = "data/invoices.txt"; //[cite: 7]
 
     // Hàm tạo (Constructor) khởi tạo cuốn sổ với số trang (capacity) do mình định trước
     public InvoiceManager(int capacity) {
@@ -66,7 +67,7 @@ public class InvoiceManager {
         CheckingExpression.checkNotNullOrEmpty(managerId, "Hoàn tiền phải có mã quản lý duyệt");
         
         double remaining = invoice.calculateRemaining(); // Tính tiền nợ
-        if (remaining < 0) { // Nếu nợ là số âm -> tức là Khách đưa dư tiền cọc -> Khách sạn phải trả lại[cite: 3]
+        if (remaining < 0) { // Nếu nợ là số âm -> tức là Khách đưa dư tiền cọc -> Khách sạn phải trả lại
             double refundAmount = Math.abs(remaining); // Đổi số âm thành số dương bằng hàm Toán học Tuyệt đối (Math.abs)
             
             // Tạo 1 tờ giấy ghi chú hoàn tiền
@@ -78,19 +79,20 @@ public class InvoiceManager {
         }
     }
 
-    // [OOP - File I/O]: Đọc / Ghi file
-    public void saveToFile() {
-        // PrintWriter là cây bút. OutputStreamWriter là trang giấy chuẩn UTF-8 (để ghi được Tiếng Việt có dấu).
-        // FileOutputStream là cái máy in in ra file "invoices.txt".
-        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(FILE_PATH), StandardCharsets.UTF_8))) {
-            
-            // Chạy vòng lặp lấy từng hóa đơn ghi ra file (cách nhau bởi dấu phẩy)
-            for (int i = 0; i < count; i++) {
-                Invoice inv = invoices[i];
-                writer.println(inv.getInvoiceId() + "," + inv.getStayId() + "," + inv.getStatus() + "," + inv.getDepositApplied());
-            }
+    // [OOP - File I/O]: SỬ DỤNG CÔNG CỤ FileUtil CỦA NHÓM TRƯỞNG
+    public void writeFile() {
+        // Tạo một mảng String để chứa từng dòng text sẽ in ra file
+        String[] lines = new String[count];
+        for (int i = 0; i < count; i++) {
+            Invoice inv = invoices[i];
+            // Hàm join sẽ tự động nối các dữ liệu lại với nhau bằng dấu "|" chuẩn của nhóm
+            lines[i] = FileUtil.join(inv.getInvoiceId(), inv.getStayId(), inv.getStatus(), inv.getDepositApplied());
+        }
+        
+        try {
+            // Hàm writeAllLines sẽ tự sinh ra file backup (.bak) rồi mới ghi đè file mới
+            FileUtil.writeAllLines(FILE_PATH, lines, count);
         } catch (IOException e) {
-            // Bắt lỗi nếu ổ cứng bị hỏng hoặc file bị khóa
             System.out.println("Lỗi ghi file hóa đơn: " + e.getMessage());
         }
     }
