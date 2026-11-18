@@ -34,4 +34,5 @@ public class IndividualBooking extends Booking {
     public Room getRoomObj() { return roomObj; }
     public void setRoomObj(Room roomObj) { this.roomObj = roomObj; }
     public int getNumberOfGuests() { return numberOfGuests; }
+    public void setNumberOfGuests(int numberOfGuests) { this.numberOfGuests = numberOfGuests; }
 }

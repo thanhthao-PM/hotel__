@@ -5,14 +5,14 @@
     import hotel.util.FileUtil;
 
     // Phòng VIP: kế thừa Room, tính giá có phụ thu
-    public class VIPRoom extends Room {
+    public class VipRoom extends Room {
 
         private double surchargeRate;  // hệ số phụ thu, ví dụ 0.3 = phụ thu 30%
         private String amenities;      // tiện nghi
         private String viewType;       // hướng nhìn
 
         // Constructor đầy đủ
-        public VIPRoom(String roomId, String roomNumber, int floor, int capacity,
+        public VipRoom(String roomId, String roomNumber, int floor, int capacity,
                     double basePrice, RoomStatus status, boolean active,
                     double surchargeRate, String amenities, String viewType) {
             super(roomId, roomNumber, floor, capacity, basePrice, status, active);

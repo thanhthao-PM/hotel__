@@ -1,15 +1,25 @@
 package hotel.ui;
 
 import hotel.model.Account;
+import hotel.model.Booking;
+import hotel.model.BookingDetail;
+import hotel.model.BookingRequest;
 import hotel.model.Customer;
+import hotel.model.Deposit;
 import hotel.model.Employee;
 import hotel.model.GuestMember;
 import hotel.model.Person;
+import hotel.model.Room;
 import hotel.model.enums.Gender;
+import hotel.model.enums.PaymentMethod;
 import hotel.model.enums.Role;
+import hotel.model.enums.RequestStatus;
 import hotel.service.AccountManager;
+import hotel.service.BookingManager;
 import hotel.service.CustomerManager;
 import hotel.service.EmployeeManager;
+import hotel.service.RoomManager;
+import hotel.service.ServiceManager;
 import hotel.service.InvoiceManager;
 import hotel.service.ReportService;
 import hotel.util.CheckingExpression;
@@ -18,7 +28,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Scanner;
 
 // P4 thêm
@@ -58,7 +70,8 @@ public class ConsoleMenu {
     // P4 thêm --
     private StayManager stayManager;
     // P4 hết ---
-    // TODO(P2..P5): thêm RoomManager, BookingManager... vào đây và vào constructor
+    private final RoomManager roomManager;
+    private final BookingManager bookingManager;
 
     private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
     private int depth = 0;
@@ -67,8 +80,9 @@ public class ConsoleMenu {
     public void setStayManager(StayManager stayManager) { this.stayManager = stayManager; }
     // P4 hết ---
 
+
     public ConsoleMenu(AccountManager accountManager,
-                       EmployeeManager employeeManager,
+                   EmployeeManager employeeManager,
                        CustomerManager customerManager,
                        RoomManager roomManager,
                        ServiceManager serviceManager,
@@ -77,15 +91,29 @@ public class ConsoleMenu {
         
         private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
         private int depth = 0;
-        this.accountManager = accountManager;
-        this.employeeManager = employeeManager;
-        this.customerManager = customerManager;
-        this.roomManager = roomManager;
-        this.serviceManager = serviceManager;
-        // THÊM 2 DÒNG NÀY:
-        this.invoiceManager = invoiceManager; // để gọi nghiệp vụ và báo cáo
-        this.reportService = reportService;
-    }
+        this(accountManager, employeeManager, customerManager, new RoomManager(), new BookingManager());
+}
+
+public ConsoleMenu(AccountManager accountManager,
+                   EmployeeManager employeeManager,
+                   CustomerManager customerManager,
+                   RoomManager roomManager,
+                   BookingManager bookingManager,
+                   ServiceManager serviceManager,
+                   InvoiceManager invoiceManager,
+                   ReportService reportService) {
+
+    this.accountManager = accountManager;
+    this.employeeManager = employeeManager;
+    this.customerManager = customerManager;
+    this.roomManager = roomManager;
+    this.bookingManager = bookingManager;
+    this.roomManager = roomManager;
+    this.serviceManager = serviceManager;
+    // THÊM 2 DÒNG NÀY:
+    this.invoiceManager = invoiceManager; // để gọi nghiệp vụ và báo cáo
+    this.reportService = reportService;
+}
 
     // ============================================================
     // VÒNG CHẠY CHÍNH
@@ -325,7 +353,7 @@ public class ConsoleMenu {
                         if (isEmployeeRole()) noPermission();        
                         else openSub(() -> showPostListMenu(true));
                         break;
-                    case 4: notReady("Danh sách đặt phòng (P3)");    break;   // TODO(P3)
+                    case 4: openSub(this::showBookingList);          break;
                     // P4 thêm --
                     case 5:
                         if (stayManager == null) notReady("Khách đang lưu trú");
@@ -1262,8 +1290,10 @@ public class ConsoleMenu {
         while (true) {
             printTitle("ĐẶT PHÒNG");
             printMenu("1. Nhận yêu cầu đặt phòng qua điện thoại", "2. Đặt phòng trực tiếp - cá nhân",
-                    "3. Đặt phòng trực tiếp - đoàn", "4. Sửa đặt phòng", "5. Hủy đặt phòng",
-                    "6. Thu cọc", "7. Gửi đề nghị hủy (chờ quản lý duyệt)");
+                    "3. Đặt phòng trực tiếp - đoàn", "4. Sửa yêu cầu đặt phòng",
+                    canEdit() ? "5. Hủy Booking trực tiếp" : null, "6. Thu cọc",
+                    "7. Gửi đề nghị hủy (chờ quản lý duyệt)", "8. Lập Booking khi khách đến",
+                    "9. Danh sách đặt phòng");
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -1271,13 +1301,18 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Nhận yêu cầu đặt phòng qua điện thoại"); break;   
-                    case 2: notReady("Đặt phòng trực tiếp - cá nhân"); break;          
-                    case 3: notReady("Đặt phòng trực tiếp - đoàn"); break;             
-                    case 4: notReady("Sửa đặt phòng"); break;                          
-                    case 5: notReady("Hủy đặt phòng"); break;                          
-                    case 6: notReady("Thu cọc"); break;                                
-                    case 7: notReady("Gửi đề nghị hủy (chờ quản lý duyệt)"); break;    
+                    case 1: receiveBookingRequest(); break;
+                    case 2: createDirectBooking(false); break;
+                    case 3: createDirectBooking(true); break;
+                    case 4: editPendingRequest(); break;
+                    case 5:
+                        if (!canEdit()) noPermission();
+                        else cancelDirectBooking();
+                        break;
+                    case 6: receiveDeposit(); break;
+                    case 7: requestBookingCancellation(); break;
+                    case 8: convertRequestToBooking(); break;
+                    case 9: showBookingList(); break;
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1294,8 +1329,8 @@ public class ConsoleMenu {
         }
         while (true) {
             printTitle("DUYỆT HỦY PHIẾU ĐẶT PHÒNG");
-            printMenu("1. Danh sách đề nghị hủy chờ duyệt", "2. Duyệt hủy phiếu",
-                    "3. Quyết định hoàn hoặc mất cọc", "4. Từ chối đề nghị hủy");
+            printMenu("1. Danh sách đề nghị hủy chờ duyệt",
+                    "2. Duyệt hủy và quyết định hoàn/mất cọc", "3. Từ chối đề nghị hủy");
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -1303,10 +1338,9 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: notReady("Danh sách đề nghị hủy chờ duyệt"); break;   
-                    case 2: notReady("Duyệt hủy phiếu"); break;                   
-                    case 3: notReady("Quyết định hoàn hoặc mất cọc"); break;      
-                    case 4: notReady("Từ chối đề nghị hủy"); break;               
+                    case 1: showCancellationRequests(); break;
+                    case 2: approveBookingCancellation(); break;
+                    case 3: rejectBookingCancellation(); break;
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -1314,7 +1348,342 @@ public class ConsoleMenu {
             }
         }
     }
-    // P4 thêm --
+
+    private void receiveBookingRequest() {
+        Customer customer = promptActiveCustomer();
+        if (customer == null) return;
+        item("Loại yêu cầu: 1. Cá nhân  2. Đoàn");
+        int typeChoice = readChoice();
+        if (typeChoice != 1 && typeChoice != 2) {
+            System.out.println("Lựa chọn không hợp lệ.");
+            return;
+        }
+        String groupName = typeChoice == 2 ? readNonEmpty("Tên đoàn: ") : null;
+        LocalDate[] stayDates = readBookingDates();
+        if (stayDates == null) return;
+        String requestId = bookingManager.generateRequestId();
+        BookingDetail[] details = collectBookingDetails(requestId, stayDates[0], stayDates[1],
+                typeChoice == 2);
+        if (details == null) return;
+
+        BookingRequest request = new BookingRequest(requestId, customer.getId(),
+                typeChoice == 1 ? "INDIVIDUAL" : "GROUP", groupName,
+                stayDates[0], stayDates[1], currentUser.getEmployeeId(), details.length);
+        for (BookingDetail detail : details) request.addDetail(detail);
+        if (bookingManager.createBookingRequest(request)) {
+            System.out.printf("Đã tạo phiếu %s. Tiền cọc tối thiểu: %,.0f%n",
+                    requestId, request.calculateRequiredDeposit());
+        } else {
+            System.out.println("Không tạo được phiếu yêu cầu.");
+        }
+    }
+
+    private void createDirectBooking(boolean group) {
+        Customer customer = promptActiveCustomer();
+        if (customer == null) return;
+        String groupName = group ? readNonEmpty("Tên đoàn: ") : null;
+        LocalDate[] stayDates = readBookingDates();
+        if (stayDates == null) return;
+        BookingDetail[] details = collectBookingDetails(null, stayDates[0], stayDates[1], group);
+        if (details == null) return;
+        Booking booking = bookingManager.createDirectBooking(customer.getId(),
+                group ? "GROUP" : "INDIVIDUAL", groupName, stayDates[0], stayDates[1],
+                currentUser.getEmployeeId(), readOptional("Ghi chú (Enter nếu không có): "), details);
+        if (booking == null) {
+            System.out.println("Không tạo được Booking.");
+            return;
+        }
+        System.out.println("Đã tạo Booking " + booking.getBookingId() + ".");
+    }
+
+    private Customer promptActiveCustomer() {
+        String customerId = readNonEmpty("Mã khách hàng: ").toUpperCase();
+        Customer customer = customerManager.findCustomerById(customerId);
+        if (customer == null || !customer.isActive()) {
+            System.out.println("Không tìm thấy khách hàng đang hoạt động.");
+            return null;
+        }
+        return customer;
+    }
+
+    private LocalDate[] readBookingDates() {
+        while (true) {
+            LocalDate checkIn = readDate("Ngày nhận phòng (dd/MM/yyyy): ");
+            LocalDate checkOut = readDate("Ngày trả phòng (dd/MM/yyyy): ");
+            if (checkIn.isBefore(LocalDate.now())) {
+                System.out.println("Ngày nhận phòng không được ở quá khứ.");
+            } else if (!checkOut.isAfter(checkIn)) {
+                System.out.println("Ngày trả phòng phải sau ngày nhận phòng.");
+            } else {
+                return new LocalDate[]{checkIn, checkOut};
+            }
+            if (!confirm("Nhập lại ngày")) return null;
+        }
+    }
+
+    private BookingDetail[] collectBookingDetails(String requestId, LocalDate checkIn,
+                                                   LocalDate checkOut, boolean group) {
+        ArrayList<Room> availableRooms = new ArrayList<>();
+        for (Room room : roomManager.findAvailableRooms(checkIn, checkOut)) {
+            if (bookingManager.isRoomAvailable(room.getRoomId(), checkIn, checkOut)) {
+                availableRooms.add(room);
+            }
+        }
+        if (availableRooms.isEmpty()) {
+            System.out.println("Không có phòng trống trong khoảng ngày đã chọn.");
+            return null;
+        }
+        roomManager.displayList(availableRooms);
+        int count = group ? readPositiveInt("Số phòng: ") : 1;
+        if (count > availableRooms.size()) {
+            System.out.println("Số phòng yêu cầu vượt số phòng đang khả dụng.");
+            return null;
+        }
+        BookingDetail[] details = new BookingDetail[count];
+        Set<String> selectedRooms = new HashSet<>();
+
+        for (int i = 0; i < count; i++) {
+            while (true) {
+                String roomId = readNonEmpty("Mã phòng thứ " + (i + 1) + " (0 để hủy): ")
+                        .toUpperCase();
+                if ("0".equals(roomId)) return null;
+                Room room = roomManager.findById(roomId);
+                boolean available = room != null && room.isActive()
+                        && room.getCapacity() > 0
+                        && roomManager.isRoomAvailable(roomId, checkIn, checkOut)
+                        && bookingManager.isRoomAvailable(roomId, checkIn, checkOut);
+                if (!available || selectedRooms.contains(roomId)) {
+                    System.out.println("Phòng không tồn tại, không khả dụng hoặc đã được chọn.");
+                    continue;
+                }
+                int guests = readPositiveInt("Số khách ở phòng này: ");
+                if (guests > room.getCapacity()) {
+                    System.out.println("Số khách vượt sức chứa phòng (" + room.getCapacity() + ").");
+                    continue;
+                }
+                double unitPrice = room.calculateRoomPrice(1);
+                details[i] = new BookingDetail(bookingManager.generateDetailId(), requestId,
+                        roomId, guests, unitPrice, 0, checkIn, checkOut, null);
+                selectedRooms.add(roomId);
+                break;
+            }
+        }
+        return details;
+    }
+
+    private void editPendingRequest() {
+        String requestId = readNonEmpty("Mã phiếu yêu cầu cần sửa: ").toUpperCase();
+        BookingRequest request = bookingManager.findRequestById(requestId);
+        if (request == null || request.getRequestStatus() != RequestStatus.PENDING_DEPOSIT
+                || request.isCancellationPending()) {
+            System.out.println("Chỉ sửa được yêu cầu chưa thu cọc và chưa gửi đề nghị hủy.");
+            return;
+        }
+        LocalDate[] dates = readBookingDates();
+        if (dates == null) return;
+        BookingDetail[] updatedDetails = new BookingDetail[request.getDetailCount()];
+        Set<String> selectedRooms = new HashSet<>();
+        for (int i = 0; i < updatedDetails.length; i++) {
+            while (true) {
+                ArrayList<Room> availableRooms = new ArrayList<>();
+                for (Room candidate : roomManager.findAvailableRooms(dates[0], dates[1])) {
+                    if (bookingManager.isRoomAvailable(candidate.getRoomId(), dates[0], dates[1],
+                            requestId) && !selectedRooms.contains(candidate.getRoomId())) {
+                        availableRooms.add(candidate);
+                    }
+                }
+                if (availableRooms.isEmpty()) {
+                    System.out.println("Không còn phòng trống cho phiếu này trong khoảng ngày đã chọn.");
+                    return;
+                }
+                roomManager.displayList(availableRooms);
+                String roomId = readNonEmpty("Mã phòng thứ " + (i + 1) + " (0 để hủy): ")
+                        .toUpperCase();
+                if ("0".equals(roomId)) return;
+                Room room = roomManager.findById(roomId);
+                if (room == null || !availableRooms.contains(room)) {
+                    System.out.println("Phòng không nằm trong danh sách khả dụng.");
+                    continue;
+                }
+                int guests = readPositiveInt("Số khách: ");
+                if (guests > room.getCapacity()) {
+                    System.out.println("Số khách vượt sức chứa phòng (" + room.getCapacity() + ").");
+                    continue;
+                }
+                BookingDetail current = request.getDetails()[i];
+                updatedDetails[i] = new BookingDetail(current.getBookingDetailId(), requestId,
+                        roomId, guests, room.calculateRoomPrice(1), 0, dates[0], dates[1], current.getNotes());
+                selectedRooms.add(roomId);
+                break;
+            }
+        }
+        if (bookingManager.updatePendingRequest(requestId, updatedDetails, dates[0], dates[1])) {
+            System.out.println("Đã cập nhật phiếu yêu cầu.");
+        } else {
+            System.out.println("Không cập nhật được phiếu yêu cầu.");
+        }
+    }
+
+    private void cancelDirectBooking() {
+        String bookingId = readNonEmpty("Mã Booking trực tiếp cần hủy: ").toUpperCase();
+        Booking booking = bookingManager.findBookingById(bookingId);
+        if (booking == null || booking.getRequestId() != null) {
+            System.out.println("Không tìm thấy Booking trực tiếp.");
+            return;
+        }
+        if (!confirm("Hủy Booking " + bookingId + "?")) return;
+        if (bookingManager.cancelBookingById(bookingId)) {
+            System.out.println("Đã hủy Booking.");
+        } else {
+            System.out.println("Booking không còn ở trạng thái có thể hủy.");
+        }
+    }
+
+    private void receiveDeposit() {
+        String requestId = readNonEmpty("Mã phiếu yêu cầu: ").toUpperCase();
+        BookingRequest request = bookingManager.findRequestById(requestId);
+        if (request == null || request.getRequestStatus() != RequestStatus.PENDING_DEPOSIT
+                || request.isCancellationPending()) {
+            System.out.println("Không tìm thấy phiếu đang chờ cọc.");
+            return;
+        }
+        double amount = readPositiveDouble("Số tiền cọc: ");
+        item("Phương thức: 1. Tiền mặt  2. Thẻ  3. Chuyển khoản");
+        PaymentMethod method;
+        switch (readChoice()) {
+            case 1: method = PaymentMethod.CASH; break;
+            case 2: method = PaymentMethod.CARD; break;
+            case 3: method = PaymentMethod.TRANSFER; break;
+            default:
+                System.out.println("Phương thức không hợp lệ.");
+                return;
+        }
+        String referenceNo = readOptional("Mã giao dịch (Enter nếu không có): ");
+        Deposit deposit = bookingManager.processDeposit(requestId, amount, method,
+                currentUser.getEmployeeId(), referenceNo);
+        if (deposit == null) {
+            System.out.println("Không thu được cọc cho phiếu này.");
+            return;
+        }
+        System.out.printf("Đã thu cọc %s: %,.0f. Phiếu chuyển sang CONFIRMED.%n",
+                deposit.getDepositId(), deposit.getAmount());
+    }
+
+    private void requestBookingCancellation() {
+        String requestId = readNonEmpty("Mã phiếu cần đề nghị hủy: ").toUpperCase();
+        String reason = readNonEmpty("Lý do đề nghị hủy: ");
+        if (bookingManager.requestCancellation(requestId, reason)) {
+            System.out.println("Đã gửi đề nghị hủy, chờ quản lý duyệt.");
+        } else {
+            System.out.println("Phiếu không tồn tại, đã hết hiệu lực hoặc đang có đề nghị hủy.");
+        }
+    }
+
+    private void convertRequestToBooking() {
+        String requestId = readNonEmpty("Mã phiếu đã cọc: ").toUpperCase();
+        BookingRequest request = bookingManager.findRequestById(requestId);
+        if (request == null || request.getRequestStatus() != RequestStatus.CONFIRMED) {
+            System.out.println("Chỉ lập Booking từ phiếu đã xác nhận cọc.");
+            return;
+        }
+        Booking booking = bookingManager.convertRequestToBooking(requestId,
+                currentUser.getEmployeeId(), readOptional("Ghi chú (Enter nếu không có): "));
+        if (booking == null) {
+            System.out.println("Không lập được Booking từ phiếu yêu cầu.");
+            return;
+        }
+        System.out.println("Đã lập Booking " + booking.getBookingId() + ".");
+    }
+
+    private void showBookingList() {
+        printTitle("DANH SÁCH ĐẶT PHÒNG");
+        Booking[] bookings = bookingManager.getAllBookings();
+        if (bookings.length == 0) {
+            System.out.println("(Chưa có Booking)");
+        } else {
+            System.out.printf("%-9s %-9s %-10s %-12s %-12s %-12s %-14s%n",
+                    "Mã", "Loại", "Khách", "Nhận", "Trả", "Trạng thái", "Phòng");
+            for (Booking booking : bookings) {
+                String roomIds;
+                if (booking instanceof hotel.model.IndividualBooking) {
+                    roomIds = ((hotel.model.IndividualBooking) booking).getRoomId();
+                } else {
+                    roomIds = String.join(",", ((hotel.model.GroupBooking) booking).getRoomIds());
+                }
+                System.out.printf("%-9s %-9s %-10s %-12s %-12s %-12s %-14s%n",
+                        booking.getBookingId(), booking.getRequestId() == null ? "Trực tiếp" : "Từ phiếu",
+                        booking.getCustomerId(), DATE_FORMAT.format(booking.getCheckInDate()),
+                        DATE_FORMAT.format(booking.getExpectedCheckOutDate()), booking.getStatus(), roomIds);
+            }
+        }
+
+        List<BookingRequest> requests = bookingManager.getAllRequests();
+        if (!requests.isEmpty()) {
+            item("Phiếu yêu cầu");
+            for (BookingRequest request : requests) {
+                Deposit deposit = bookingManager.findDepositByRequestId(request.getRequestId());
+                System.out.printf("%s | Khách %s | %s - %s | %s | Cọc: %s%n",
+                        request.getRequestId(), request.getCustomerId(),
+                        DATE_FORMAT.format(request.getExpectedCheckInDate()),
+                        DATE_FORMAT.format(request.getExpectedCheckOutDate()), request.getRequestStatus(),
+                        deposit == null ? "chưa thu" : String.format("%,.0f (%s)",
+                                deposit.getAmount(), deposit.getStatus()));
+            }
+        }
+    }
+
+    private void showCancellationRequests() {
+        List<BookingRequest> requests = bookingManager.getCancellationRequests();
+        if (requests.isEmpty()) {
+            System.out.println("(Không có đề nghị hủy đang chờ duyệt)");
+            return;
+        }
+        for (BookingRequest request : requests) {
+            System.out.printf("%s | Khách %s | %s - %s | Lý do: %s%n",
+                    request.getRequestId(), request.getCustomerId(),
+                    DATE_FORMAT.format(request.getExpectedCheckInDate()),
+                    DATE_FORMAT.format(request.getExpectedCheckOutDate()), request.getCancelReason());
+        }
+    }
+
+    private void approveBookingCancellation() {
+        String requestId = readNonEmpty("Mã phiếu cần duyệt hủy: ").toUpperCase();
+        BookingRequest request = bookingManager.findRequestById(requestId);
+        if (request == null || !request.isCancellationPending()) {
+            System.out.println("Không có đề nghị hủy đang chờ duyệt cho phiếu này.");
+            return;
+        }
+        Deposit deposit = bookingManager.findDepositByRequestId(requestId);
+        boolean refund = false;
+        if (deposit != null) {
+            item(String.format("Tiền cọc %s: %,.0f (%s)", deposit.getDepositId(),
+                    deposit.getAmount(), deposit.getStatus()));
+            item("1. Hoàn cọc  2. Mất cọc");
+            int decision = readChoice();
+            if (decision != 1 && decision != 2) {
+                System.out.println("Lựa chọn không hợp lệ.");
+                return;
+            }
+            refund = decision == 1;
+        }
+        if (!confirm("Xác nhận duyệt hủy phiếu " + requestId + "?")) return;
+        if (bookingManager.cancelBookingRequest(requestId, request.getCancelReason(), refund, deposit)) {
+            System.out.println("Đã duyệt hủy phiếu."
+                    + (deposit == null ? "" : refund ? " Đã ghi nhận hoàn cọc." : " Đã ghi nhận mất cọc."));
+        } else {
+            System.out.println("Không duyệt được phiếu.");
+        }
+    }
+
+    private void rejectBookingCancellation() {
+        String requestId = readNonEmpty("Mã phiếu cần từ chối đề nghị hủy: ").toUpperCase();
+        if (bookingManager.rejectCancellation(requestId)) {
+            System.out.println("Đã từ chối đề nghị hủy.");
+        } else {
+            System.out.println("Không có đề nghị hủy đang chờ duyệt cho phiếu này.");
+        }
+    }
+ 
     // ---------- MODULE P4: LƯU TRÚ ----------
     private void showStayMenu() {
         if (stayManager == null) { notReady("Lưu trú (P4)"); return; }
@@ -1622,6 +1991,46 @@ public class ConsoleMenu {
         }
     }
 
+    private String readOptional(String prompt) {
+        System.out.print(prompt);
+        return sc.nextLine().trim();
+    }
+
+    private int readPositiveInt(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String s = sc.nextLine().trim();
+            try {
+                int value = Integer.parseInt(s);
+                CheckingExpression.checkPositiveInt(value, "Giá trị phải là số nguyên dương");
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Vui lòng nhập số nguyên.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+
+    private double readPositiveDouble(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String s = sc.nextLine().trim();
+            try {
+                double value = Double.parseDouble(s);
+                CheckingExpression.checkPositiveDouble(value, "Giá trị phải lớn hơn 0");
+                if (!Double.isFinite(value)) {
+                    throw new IllegalArgumentException("Giá trị phải là số hữu hạn");
+                }
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Vui lòng nhập một số.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Lỗi: " + e.getMessage());
+            }
+        }
+    }
+ 
     private double readNonNegativeDouble(String prompt) {
         while (true) {
             System.out.print(prompt);

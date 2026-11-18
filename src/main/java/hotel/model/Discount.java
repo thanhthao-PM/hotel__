@@ -47,4 +47,11 @@ public class Discount implements Invoice.InvoiceAdjustment {
     public double getAdjustmentAmount() {
         return -value; // Hàm Invoice.calculateTotal() khi gọi hàm này sẽ nhận được số âm để cộng vào (tức là làm giảm tổng tiền).
     }
+
+    public String getDiscountId() { return discountId; }
+    public String getInvoiceId() { return invoiceId; }
+    public Invoice.DiscountType getDiscountType() { return discountType; }
+    public double getValue() { return value; }
+    public String getReason() { return reason; }
+    public String getApprovedBy() { return approvedBy; }
 }
