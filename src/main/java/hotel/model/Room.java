@@ -61,6 +61,40 @@ public abstract class Room {
     // Chuyển thành một dòng để ghi file (mỗi loại phòng tự ghi thêm thuộc tính riêng)
     public abstract String toFileString();
 
+    // Chuyển một dòng từ file thành đối tượng Room đúng loại (VipRoom hoặc StandardRoom)
+    public static Room fromFileString(String line) {
+        String[] p = FileUtil.split(line);
+        if (p.length < 8) {
+            throw new IllegalArgumentException("Dòng dữ liệu phòng không đủ số trường: " + line);
+        }
+        String type = p[0].trim();
+        String id = p[1].trim();
+        String number = p[2].trim();
+        int floor = Integer.parseInt(p[3].trim());
+        int capacity = Integer.parseInt(p[4].trim());
+        double price = Double.parseDouble(p[5].trim());
+        RoomStatus status = RoomStatus.valueOf(p[6].trim());
+        boolean active = Boolean.parseBoolean(p[7].trim());
+
+        if ("VIP".equalsIgnoreCase(type)) {
+            if (p.length < 11) {
+                throw new IllegalArgumentException("Dòng phòng VIP không đủ trường: " + line);
+            }
+            double surcharge = Double.parseDouble(p[8].trim());
+            String amenities = p[9].trim();
+            String viewType = p[10].trim();
+            return new VipRoom(id, number, floor, capacity, price, status, active, surcharge, amenities, viewType);
+        } else if ("STD".equalsIgnoreCase(type) || "STANDARD".equalsIgnoreCase(type)) {
+            if (p.length < 10) {
+                throw new IllegalArgumentException("Dòng phòng Standard không đủ trường: " + line);
+            }
+            String bedType = p[8].trim();
+            int bedCount = Integer.parseInt(p[9].trim());
+            return new StandardRoom(id, number, floor, capacity, price, status, active, bedType, bedCount);
+        }
+        throw new IllegalArgumentException("Loại phòng không hợp lệ: " + type);
+    }
+
     // Kiểm tra việc chuyển trạng thái từ "from" sang "to" có hợp lệ không
     // AVAILABLE -> BOOKED, OCCUPIED, MAINTENANCE
     // BOOKED -> AVAILABLE, OCCUPIED, MAINTENANCE

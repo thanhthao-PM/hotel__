@@ -3,18 +3,32 @@ package hotel.service;
 import hotel.model.FoodService;
 import hotel.model.HotelService;
 import hotel.model.LaundryService;
+import hotel.util.CheckingExpression;
 import hotel.model.SpaService;
 import hotel.storage.IFileHandler;
 import hotel.util.FileUtil;
 import hotel.util.Validator;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 // Quản lý danh sách dịch vụ khách sạn (CRUD, tìm kiếm, bảng giá, đọc/ghi file)
 public class ServiceManager implements IManager<HotelService>, IFileHandler {
 
+    // Tự động nhận diện đường dẫn file trong thư mục file\ (ưu tiên file/ hoặc src/main/java/hotel/file/)
+    public static String resolvePath(String fileName) {
+        if (Files.exists(Paths.get("file", fileName))) {
+            return "file/" + fileName;
+        }
+        if (Files.exists(Paths.get("src/main/java/hotel/file", fileName))) {
+            return "src/main/java/hotel/file/" + fileName;
+        }
+        return "src/main/java/hotel/file/" + fileName;
+    }
+
     // Đường dẫn file dữ liệu
-    public static final String FILE_PATH = "data/services.txt";
+    public static final String FILE_PATH = resolvePath("services.txt");
 
     // Mảng đối tượng (ArrayList) lưu dịch vụ
     private ArrayList<HotelService> services = new ArrayList<>();
@@ -122,6 +136,8 @@ public class ServiceManager implements IManager<HotelService>, IFileHandler {
 
     // Tìm gần đúng theo tên (chứa từ khóa, không phân biệt hoa thường)
     public ArrayList<HotelService> findByName(String keyword) {
+        // keyword null gây NullPointerException ở keyword.toLowerCase()
+        CheckingExpression.checkNotNullOrEmpty(keyword, "Từ khóa tìm kiếm không được để trống");
         ArrayList<HotelService> result = new ArrayList<>();
         String key = keyword.toLowerCase();
         for (HotelService s : services) {
@@ -134,6 +150,8 @@ public class ServiceManager implements IManager<HotelService>, IFileHandler {
 
     // Tìm theo loại dịch vụ: "FOOD", "LAUNDRY" hoặc "SPA"
     public ArrayList<HotelService> findByType(String type) {
+        // type null gây NullPointerException ở type.equalsIgnoreCase(...)
+        CheckingExpression.checkNotNullOrEmpty(type, "Loại dịch vụ không được để trống (FOOD, LAUNDRY hoặc SPA)");
         ArrayList<HotelService> result = new ArrayList<>();
         for (HotelService s : services) {
             if ((type.equalsIgnoreCase("FOOD") && s instanceof FoodService)
@@ -236,12 +254,15 @@ public class ServiceManager implements IManager<HotelService>, IFileHandler {
         services.clear();
         try {
             for (String line : FileUtil.readLines(FILE_PATH)) {
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue; // Bỏ qua dòng trống và ghi chú
+                }
                 try {
                     HotelService s = parseService(line);
                     services.add(s);
                     HotelService.syncCounter(s.getServiceId());
                 } catch (Exception e) {
-                    System.out.println("Bỏ qua dòng dịch vụ lỗi: " + line);
+                    System.out.println("Bỏ qua dòng dịch vụ lỗi: " + line + " (" + e.getMessage() + ")");
                 }
             }
             return true;
@@ -251,29 +272,9 @@ public class ServiceManager implements IManager<HotelService>, IFileHandler {
         }
     }
 
-    // Chuyển một dòng file thành đối tượng đúng loại (FOOD, LAUNDRY hoặc SPA)
+    // Chuyển một dòng file thành đối tượng đúng loại (dùng HotelService.fromFileString)
     private HotelService parseService(String line) {
-        String[] p = FileUtil.split(line);
-        String type = p[0];
-        String id = p[1];
-        String name = p[2];
-        double price = Double.parseDouble(p[3]);
-        String unit = p[4];
-        String desc = p[5];
-        boolean available = Boolean.parseBoolean(p[6]);
-        if (type.equals("FOOD")) {
-            return new FoodService(id, name, price, unit, desc, available,
-                    p[7], Integer.parseInt(p[8]));
-        }
-        if (type.equals("LAUNDRY")) {
-            return new LaundryService(id, name, price, unit, desc, available,
-                    p[7], Integer.parseInt(p[8]));
-        }
-        if (type.equals("SPA")) {
-            return new SpaService(id, name, price, unit, desc, available,
-                    p[7], Integer.parseInt(p[8]));
-        }
-        throw new IllegalArgumentException("Loại dịch vụ không hợp lệ: " + type);
+        return HotelService.fromFileString(line);
     }
 
     // Ghi dịch vụ xuống file
