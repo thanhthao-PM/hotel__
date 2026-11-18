@@ -116,19 +116,28 @@ public class ServiceUsage {
 
     // ---------- file ----------
     public String toFileLine() {
-        return String.join("|", usageId, stayId, serviceId, Double.toString(quantity),
-                Double.toString(unitPriceAtUse), usedAt.toString(), recordedBy, Boolean.toString(cancelled));
+        String qtyStr = (quantity == (long) quantity) ? String.valueOf((long) quantity) : Double.toString(quantity);
+        String priceStr = (unitPriceAtUse == (long) unitPriceAtUse) ? String.valueOf((long) unitPriceAtUse) : Double.toString(unitPriceAtUse);
+        return String.join("|", usageId, stayId, serviceId, qtyStr, priceStr, usedAt.toString(), recordedBy, Boolean.toString(cancelled));
+    }
+
+    public String toFileString() {
+        return toFileLine();
     }
 
     public static ServiceUsage fromFileLine(String line) {
         String[] f = line.split("\\|", -1);
         if (f.length != 8) throw new IllegalArgumentException("Sai số trường (cần 8, có " + f.length + ")");
-        ServiceUsage u = new ServiceUsage(f[0], f[1], f[2], Double.parseDouble(f[3]),
-                Double.parseDouble(f[4]), LocalDateTime.parse(f[5]), f[6], Boolean.parseBoolean(f[7]));
+        ServiceUsage u = new ServiceUsage(f[0].trim(), f[1].trim(), f[2].trim(), Double.parseDouble(f[3].trim()),
+                Double.parseDouble(f[4].trim()), LocalDateTime.parse(f[5].trim()), f[6].trim(), Boolean.parseBoolean(f[7].trim()));
         if (u.usageId.isEmpty() || u.stayId.isEmpty() || u.serviceId.isEmpty()) {
             throw new IllegalArgumentException("Thiếu mã");
         }
         return u;
+    }
+
+    public static ServiceUsage fromFileString(String line) {
+        return fromFileLine(line);
     }
 
     @Override

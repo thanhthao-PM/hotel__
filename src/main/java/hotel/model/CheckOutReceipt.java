@@ -95,14 +95,28 @@ public class CheckOutReceipt {
 
     public String toFileLine() {
         return String.join("|", receiptId, stayId, checkOutTime.toString(), roomCondition,
-                dueCheckOut == null ? "" : dueCheckOut.toString(), Integer.toString(lateHours), handledBy, note);
+                Integer.toString(lateHours), handledBy, note);
+    }
+
+    public String toFileString() {
+        return toFileLine();
     }
 
     public static CheckOutReceipt fromFileLine(String line) {
         String[] f = line.split("\\|", -1);
-        if (f.length != 8) throw new IllegalArgumentException("Sai số trường (cần 8, có " + f.length + ")");
-        if (f[0].isEmpty() || f[1].isEmpty()) throw new IllegalArgumentException("Thiếu mã");
-        return new CheckOutReceipt(f[0], f[1], LocalDateTime.parse(f[2]), f[3],
-                f[4].isEmpty() ? null : LocalDateTime.parse(f[4]), Integer.parseInt(f[5]), f[6], f[7]);
+        if (f.length == 7) {
+            if (f[0].trim().isEmpty() || f[1].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã");
+            return new CheckOutReceipt(f[0].trim(), f[1].trim(), LocalDateTime.parse(f[2].trim()), f[3].trim(),
+                    null, Integer.parseInt(f[4].trim()), f[5].trim(), f[6].trim());
+        } else if (f.length == 8) {
+            if (f[0].trim().isEmpty() || f[1].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã");
+            return new CheckOutReceipt(f[0].trim(), f[1].trim(), LocalDateTime.parse(f[2].trim()), f[3].trim(),
+                    f[4].trim().isEmpty() ? null : LocalDateTime.parse(f[4].trim()), Integer.parseInt(f[5].trim()), f[6].trim(), f[7].trim());
+        }
+        throw new IllegalArgumentException("Sai số trường (cần 7 hoặc 8, có " + f.length + ")");
+    }
+
+    public static CheckOutReceipt fromFileString(String line) {
+        return fromFileLine(line);
     }
 }

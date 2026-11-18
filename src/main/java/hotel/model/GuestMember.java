@@ -6,7 +6,7 @@ import hotel.util.CheckingExpression;
 
 public class GuestMember extends Person {
 
-    private static final String PREFIX   = "KH";        // tiền tố mã: KH001, KH002...
+    private static final String PREFIX   = "GM";        // tiền tố mã: GM001, GM002...
     public static final String TYPE_TAG = "GUEST MEMBER";  // nhãn loại ghi ở đầu dòng file
     private static final String SEP      = "|";         // ký tự ngăn cách
     
