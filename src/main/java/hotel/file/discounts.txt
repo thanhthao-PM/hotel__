@@ -1,18 +1,3 @@
-# ============================================================
-# FILE: discounts.txt  -  GIẢM GIÁ HÓA ĐƠN (class Discount, cài interface InvoiceAdjustment)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: DS001, DS002...
-# Tiền: số nguyên VNĐ
-#
-# Cột: discountId|invoiceId|discountType|value|reason|approvedBy
-#   invoiceId: mã IV... trong invoices.txt
-#   discountType: PERCENT (value là số phần trăm) hoặc FIXED (value là số tiền VNĐ)
-#   reason: lý do giảm giá
-#   approvedBy: mã EM... của Manager duyệt (nhân viên thường không tự áp giảm giá)
-# Giảm giá làm GIẢM tổng hóa đơn (getAdjustmentAmount trả số âm)
-# ============================================================
-
 DS001|IV002|PERCENT|10|Ưu đãi khách đoàn|EM002
 DS002|IV004|FIXED|200000|Khách quen|EM002
 DS003|IV006|PERCENT|5|Khách thân thiết|EM002

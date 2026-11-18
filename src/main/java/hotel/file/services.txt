@@ -1,31 +1,10 @@
-# ============================================================
-# FILE: services.txt  -  DỊCH VỤ (class FoodService, LaundryService, SpaService, cùng kế thừa HotelService)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: SV001, SV002...
-# Tiền: số nguyên VNĐ
-# Cột đầu tiên là LOẠI DỊCH VỤ để biết new lớp con nào.
-#
-# [FOOD] FoodService (4 dòng)
-#   FOOD|serviceId|name|unitPrice|unit|description|available|category|preparationMinutes
-#
-# [LAUNDRY] LaundryService (2 dòng)
-#   LAUNDRY|serviceId|name|unitPrice|unit|description|available|chargeBy|turnaroundHours
-#   chargeBy: PER_KG hoặc PER_ITEM
-#
-# [SPA] SpaService (4 dòng)
-#   SPA|serviceId|name|unitPrice|unit|description|available|treatmentType|durationMinutes
-#
-# available=false: ngưng cung cấp (xóa mềm)
-# ============================================================
-
-FOOD|SV001|Bữa sáng buffet|150000|phần|Buffet sáng tại nhà hàng tầng 1|true|Đồ ăn sáng|0
-FOOD|SV002|Cơm gà Hải Nam|90000|phần|Phục vụ tại phòng|true|Món chính|20
-FOOD|SV003|Nước suối|20000|chai|Chai 500ml|true|Đồ uống|1
-FOOD|SV004|Cà phê sữa đá|45000|ly|Phục vụ tại phòng|true|Đồ uống|5
-LAUNDRY|SV005|Giặt ủi theo ký|60000|kg|Giặt sấy gấp gọn|true|PER_KG|24
-LAUNDRY|SV006|Ủi áo sơ mi|30000|món|Ủi hơi|true|PER_ITEM|6
-SPA|SV007|Massage toàn thân|450000|giờ|Tinh dầu thiên nhiên|true|Massage|60
-SPA|SV008|Massage chân|250000|gói|Ngâm chân thảo dược|true|Massage|45
-SPA|SV009|Xông hơi|200000|lượt|Phòng xông hơi khô|true|Xông hơi|30
-SPA|SV010|Chăm sóc da mặt|500000|gói|Tạm ngưng cung cấp|false|Chăm sóc da|75
+FOOD|SV001|Bữa sáng buffet|150000.0|phần|Buffet sáng tại nhà hàng tầng 1|true|Đồ ăn sáng|0
+FOOD|SV002|Cơm gà Hải Nam|90000.0|phần|Phục vụ tại phòng|true|Món chính|20
+FOOD|SV003|Nước suối|20000.0|chai|Chai 500ml|true|Đồ uống|1
+FOOD|SV004|Cà phê sữa đá|45000.0|ly|Phục vụ tại phòng|true|Đồ uống|5
+LAUNDRY|SV005|Giặt ủi theo ký|60000.0|kg|Giặt sấy gấp gọn|true|PER_KG|24
+LAUNDRY|SV006|Ủi áo sơ mi|30000.0|món|Ủi hơi|true|PER_ITEM|6
+SPA|SV007|Massage toàn thân|450000.0|giờ|Tinh dầu thiên nhiên|true|Massage|60
+SPA|SV008|Massage chân|250000.0|gói|Ngâm chân thảo dược|true|Massage|45
+SPA|SV009|Xông hơi|200000.0|lượt|Phòng xông hơi khô|true|Xông hơi|30
+SPA|SV010|Chăm sóc da mặt|500000.0|gói|Tạm ngưng cung cấp|false|Chăm sóc da|75

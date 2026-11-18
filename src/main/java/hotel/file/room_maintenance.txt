@@ -1,16 +1,3 @@
-# ============================================================
-# FILE: room_maintenance.txt  -  BẢO TRÌ PHÒNG (class RoomMaintenance)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: MT001, MT002...
-# Ngày: yyyy-MM-dd
-#
-# Cột: maintenanceId|roomId|startDate|endDate|reason|reportedBy|closed
-#   roomId: mã RO... trong rooms.txt
-#   reportedBy: mã EM... của nhân viên báo hỏng
-#   closed=true: bản ghi bảo trì đã đóng
-# ============================================================
-
 MT001|RO402|2026-11-10|2026-11-16|Hỏng điều hòa|EM006|false
 MT002|RO203|2026-10-01|2026-10-03|Thay khóa cửa|EM007|true
 MT003|RO103|2026-09-15|2026-09-16|Sửa vòi nước|EM006|true

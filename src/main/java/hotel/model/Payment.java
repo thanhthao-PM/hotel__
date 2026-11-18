@@ -79,11 +79,4 @@ public class Payment {
             p[5].trim(), p[6].trim()
         );
     }
-
-    public String getPaymentId() { return paymentId; }
-    public String getInvoiceId() { return invoiceId; }
-    public Invoice.PaymentMethod getMethod() { return method; }
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public String getReceivedBy() { return receivedBy; }
-    public String getReferenceNo() { return referenceNo; }
 }

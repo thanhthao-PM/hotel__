@@ -1,0 +1,22 @@
+# ============================================================
+# FILE: checkin_receipts.txt  -  PHIẾU NHẬN PHÒNG (class CheckInReceipt)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: CI001, CI002...
+# Ngày giờ: yyyy-MM-ddTHH:mm
+#
+# Cột: receiptId|stayId|checkInTime|guestCount|handledBy|note
+#   stayId: mã ST... trong stays.txt
+#   handledBy: mã EM... của nhân viên làm thủ tục
+# ============================================================
+
+CI001|ST001|2026-11-10T14:05|2|EM003|
+CI002|ST002|2026-11-05T13:40|1|EM004|
+CI003|ST003|2026-11-08T12:50|3|EM003|Đoàn đến sớm
+CI004|ST004|2026-11-08T12:55|1|EM003|
+CI005|ST005|2026-11-11T11:30|2|EM005|Nhận phòng sớm
+CI006|ST006|2026-11-11T15:10|2|EM003|Đã nâng phòng
+CI007|ST007|2026-11-02T14:10|2|EM004|Khách nước ngoài
+CI008|ST008|2026-10-20T14:00|2|EM003|
+CI009|ST009|2026-10-26T14:00|2|EM005|
+CI010|ST010|2026-10-28T13:30|1|EM004|

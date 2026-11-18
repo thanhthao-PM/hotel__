@@ -1,0 +1,21 @@
+# ============================================================
+# FILE: checkout_receipts.txt  -  PHIẾU TRẢ PHÒNG (class CheckOutReceipt)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: CO001, CO002...
+# Ngày giờ: yyyy-MM-ddTHH:mm
+#
+# Cột: receiptId|stayId|checkOutTime|roomCondition|lateHours|handledBy|note
+#   stayId: mã ST... trong stays.txt
+#   lateHours: số giờ trả muộn, dùng để tính phụ thu (extra_charges.txt)
+#   handledBy: mã EM...
+# Lượt ở đang ACTIVE (ST001, ST005, ST006) chưa có phiếu trả
+# ============================================================
+
+CO001|ST002|2026-11-07T14:00|Bình thường|2|EM004|Trả muộn 2 giờ
+CO002|ST003|2026-11-10T11:30|Bình thường|0|EM005|
+CO003|ST004|2026-11-10T11:45|Hỏng khăn tắm|0|EM005|Phụ thu hư hỏng
+CO004|ST007|2026-11-04T11:00|Bình thường|0|EM004|
+CO005|ST008|2026-10-21T10:30|Bình thường|0|EM004|Trả phòng sớm
+CO006|ST009|2026-10-28T10:50|Bình thường|0|EM005|
+CO007|ST010|2026-10-30T11:00|Bình thường|0|EM004|

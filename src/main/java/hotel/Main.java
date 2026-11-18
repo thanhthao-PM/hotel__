@@ -44,6 +44,8 @@ public class Main {
         ServiceManager serviceManager = new ServiceManager();
         InvoiceManager invoiceManager = new InvoiceManager(100);
         ReportService reportService = new ReportService(invoiceManager);
+        BookingManager bookingManager = new BookingManager();
+        
 
         // 2. Nạp file
         employeeManager.readFile();
