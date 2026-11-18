@@ -86,15 +86,34 @@ public class CheckInReceipt {
 
     public String toFileLine() {
         return String.join("|", receiptId, stayId, checkInTime.toString(), Integer.toString(guestCount),
-                Integer.toString(earlyHours), handledBy, note);
+                handledBy, note);
+    }
+
+    public String toFileString() {
+        return toFileLine();
     }
 
     public static CheckInReceipt fromFileLine(String line) {
         String[] f = line.split("\\|", -1);
-        if (f.length != 7) throw new IllegalArgumentException("Sai số trường (cần 7, có " + f.length + ")");
-        if (f[0].isEmpty() || f[1].isEmpty()) throw new IllegalArgumentException("Thiếu mã");
-        return new CheckInReceipt(f[0], f[1], LocalDateTime.parse(f[2]), Integer.parseInt(f[3]),
-                Integer.parseInt(f[4]), f[5], f[6]);
+        if (f.length == 6) {
+            if (f[0].trim().isEmpty() || f[1].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã");
+            LocalDateTime time = LocalDateTime.parse(f[2].trim());
+            int guests = Integer.parseInt(f[3].trim());
+            String handler = f[4].trim();
+            String noteText = f[5].trim();
+            LocalDateTime standardCheckIn = LocalDateTime.of(time.toLocalDate(), StayRecord.STANDARD_CHECK_IN_TIME);
+            int early = time.isBefore(standardCheckIn) ? StayRecord.ceilHours(time, standardCheckIn) : 0;
+            return new CheckInReceipt(f[0].trim(), f[1].trim(), time, guests, early, handler, noteText);
+        } else if (f.length == 7) {
+            if (f[0].trim().isEmpty() || f[1].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã");
+            return new CheckInReceipt(f[0].trim(), f[1].trim(), LocalDateTime.parse(f[2].trim()), Integer.parseInt(f[3].trim()),
+                    Integer.parseInt(f[4].trim()), f[5].trim(), f[6].trim());
+        }
+        throw new IllegalArgumentException("Sai số trường (cần 6 hoặc 7, có " + f.length + ")");
+    }
+
+    public static CheckInReceipt fromFileString(String line) {
+        return fromFileLine(line);
     }
 }
 

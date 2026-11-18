@@ -3,22 +3,35 @@ package hotel.service;
 import hotel.model.Room;
 import hotel.model.RoomMaintenance;
 import hotel.model.StandardRoom;
-import hotel.model.VIPRoom;
+import hotel.model.VipRoom;
 import hotel.model.enums.RoomStatus;
 import hotel.util.CheckingExpression;
 import hotel.storage.IFileHandler;
 import hotel.util.FileUtil;
 import hotel.util.Validator;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
 // Quản lý danh sách phòng và bản ghi bảo trì (CRUD, tìm kiếm, đọc/ghi file)
 public class RoomManager implements IManager<Room>, IFileHandler {
 
+    // Tự động nhận diện đường dẫn file trong thư mục file\ (ưu tiên file/ hoặc src/main/java/hotel/file/)
+    public static String resolvePath(String fileName) {
+        if (Files.exists(Paths.get("file", fileName))) {
+            return "file/" + fileName;
+        }
+        if (Files.exists(Paths.get("src/main/java/hotel/file", fileName))) {
+            return "src/main/java/hotel/file/" + fileName;
+        }
+        return "src/main/java/hotel/file/" + fileName;
+    }
+
     // Đường dẫn file dữ liệu
-    public static final String FILE_PATH = "data/rooms.txt";
-    public static final String MAINTENANCE_FILE_PATH = "data/maintenances.txt";
+    public static final String FILE_PATH = resolvePath("rooms.txt");
+    public static final String MAINTENANCE_FILE_PATH = resolvePath("room_maintenance.txt");
 
     // Mảng đối tượng (ArrayList) lưu phòng và bảo trì
     private ArrayList<Room> rooms = new ArrayList<>();
@@ -29,24 +42,30 @@ public class RoomManager implements IManager<Room>, IFileHandler {
     // Thêm phòng mới: không trùng mã, không trùng số phòng, giá và sức chứa phải dương
     @Override
     public boolean add(Room room) {
-        if (room == null) {
-            return false;
-        }
-        if (findById(room.getRoomId()) != null) {
-            System.out.println("Lỗi: mã phòng đã tồn tại.");
-            return false;
-        }
-        if (findByRoomNumber(room.getRoomNumber()) != null) {
-            System.out.println("Lỗi: số phòng đã tồn tại.");
-            return false;
-        }
-        if (room.getBasePrice() <= 0 || room.getCapacity() <= 0) {
-            System.out.println("Lỗi: giá và sức chứa phải lớn hơn 0.");
-            return false;
-        }
-        rooms.add(room);
-        return true;
+    if (room == null) {
+        return false;
     }
+
+    if (findById(room.getRoomId()) != null) {
+        return false;
+    }
+
+    if (findByRoomNumber(room.getRoomNumber()) != null) {
+        return false;
+    }
+
+    if (room.getCapacity() <= 0 || room.getBasePrice() <= 0) {
+        return false;
+    }
+
+    // Thêm phòng vào danh sách
+    rooms.add(room);
+
+    // Ghi lại toàn bộ danh sách xuống file
+    writeToFile();
+
+    return true;
+}
 
     @Override
     public boolean remove(String id) {
@@ -156,7 +175,7 @@ public class RoomManager implements IManager<Room>, IFileHandler {
         CheckingExpression.checkNotNullOrEmpty(type, "Loại phòng không được để trống (VIP hoặc STANDARD)");
         ArrayList<Room> result = new ArrayList<>();
         for (Room r : rooms) {
-            boolean isVip = r instanceof VIPRoom;
+            boolean isVip = r instanceof VipRoom;
             if ((type.equalsIgnoreCase("VIP") && isVip)
                     || (type.equalsIgnoreCase("STANDARD") && !isVip)) {
                 result.add(r);
@@ -377,28 +396,32 @@ public class RoomManager implements IManager<Room>, IFileHandler {
         try {
             // Đọc phòng trước
             for (String line : FileUtil.readLines(FILE_PATH)) {
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue; // Bỏ qua dòng trống và ghi chú
+                }
                 try {
                     Room r = parseRoom(line);
                     rooms.add(r);
                     Room.syncCounter(r.getRoomId());
                 } catch (Exception e) {
-                    System.out.println("Bỏ qua dòng phòng lỗi: " + line);
+                    System.out.println("Bỏ qua dòng phòng lỗi: " + line + " (" + e.getMessage() + ")");
                 }
             }
             // Đọc bảo trì sau, vì cần phòng đã tồn tại
             for (String line : FileUtil.readLines(MAINTENANCE_FILE_PATH)) {
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue; // Bỏ qua dòng trống và ghi chú
+                }
                 try {
-                    String[] p = FileUtil.split(line);
-                    if (findById(p[1]) == null) {
+                    RoomMaintenance m = RoomMaintenance.fromFileString(line);
+                    if (findById(m.getRoomId()) == null) {
                         System.out.println("Bỏ qua bảo trì tham chiếu phòng không tồn tại: " + line);
                         continue;
                     }
-                    RoomMaintenance m = new RoomMaintenance(p[0], p[1], LocalDate.parse(p[2]),
-                            LocalDate.parse(p[3]), p[4], p[5], Boolean.parseBoolean(p[6]));
                     maintenances.add(m);
                     RoomMaintenance.syncCounter(m.getMaintenanceId());
                 } catch (Exception e) {
-                    System.out.println("Bỏ qua dòng bảo trì lỗi: " + line);
+                    System.out.println("Bỏ qua dòng bảo trì lỗi: " + line + " (" + e.getMessage() + ")");
                 }
             }
             return true;
@@ -408,23 +431,9 @@ public class RoomManager implements IManager<Room>, IFileHandler {
         }
     }
 
-    // Chuyển một dòng file thành đối tượng Room đúng loại (VIP hoặc STANDARD)
+    // Chuyển một dòng file thành đối tượng Room đúng loại (dùng Room.fromFileString)
     private Room parseRoom(String line) {
-        String[] p = FileUtil.split(line);
-        String type = p[0];
-        String id = p[1];
-        String number = p[2];
-        int floor = Integer.parseInt(p[3]);
-        int capacity = Integer.parseInt(p[4]);
-        double price = Double.parseDouble(p[5]);
-        RoomStatus status = RoomStatus.valueOf(p[6]);
-        boolean active = Boolean.parseBoolean(p[7]);
-        if (type.equals("VIP")) {
-            return new VIPRoom(id, number, floor, capacity, price, status, active,
-                    Double.parseDouble(p[8]), p[9], p[10]);
-        }
-        return new StandardRoom(id, number, floor, capacity, price, status, active,
-                p[8], Integer.parseInt(p[9]));
+        return Room.fromFileString(line);
     }
 
     // Ghi phòng và bảo trì xuống file

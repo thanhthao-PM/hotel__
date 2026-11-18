@@ -6,8 +6,10 @@ import hotel.model.BookingList;
 import hotel.model.BookingRequest;
 import hotel.model.BookingRequestList;
 import hotel.model.Deposit;
+import hotel.model.DepositList;
 import hotel.model.IndividualBooking;
 import hotel.model.GroupBooking;
+import hotel.model.bookingDetailList;
 import hotel.model.enums.BookingStatus;
 // import hotel.model.enums.DepositStatus;
 import hotel.model.enums.PaymentMethod;
@@ -15,7 +17,12 @@ import hotel.model.enums.RequestStatus;
 import hotel.util.CheckingExpression;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Lớp Quản lý các đơn Đặt phòng, Yêu cầu đặt phòng và Tiền cọc (Module P3).
@@ -24,6 +31,8 @@ import java.util.List;
 public class BookingManager {
     private final BookingList bookingList;
     private final BookingRequestList requestList;
+    private final bookingDetailList bookingDetails = new bookingDetailList();
+    private final DepositList deposits = new DepositList();
 
     // Bộ đếm sinh mã tự động (Static counter)
     private static int nextBookingId = 1;
@@ -50,17 +59,24 @@ public class BookingManager {
      * Phải kiểm tra trùng lịch trên cả BookingRequest đang giữ chỗ và Booking chính thức.
      */
     public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut) {
+        return isRoomAvailable(roomId, checkIn, checkOut, null);
+    }
+
+    public boolean isRoomAvailable(String roomId, LocalDate checkIn, LocalDate checkOut,
+                                   String excludedRequestId) {
         if (roomId == null || checkIn == null || checkOut == null) return false;
         if (!checkOut.isAfter(checkIn)) return false;
 
         // 1. Kiểm tra trên danh sách BookingRequest đang giữ chỗ (PENDING_DEPOSIT hoặc CONFIRMED)
         List<BookingRequest> allRequests = requestList.getAll();
         for (BookingRequest req : allRequests) {
+            if (excludedRequestId != null
+                    && excludedRequestId.equalsIgnoreCase(req.getRequestId())) continue;
             if (req.isActive()) {
                 BookingDetail[] details = req.getDetails();
                 for (int i = 0; i < req.getDetailCount(); i++) {
                     BookingDetail d = details[i];
-                    if (d != null && roomId.equals(d.getOriginalRoomId())) {
+                    if (d != null && roomId.equalsIgnoreCase(d.getOriginalRoomId())) {
                         if (checkIn.isBefore(d.getCheckOutDate()) && checkOut.isAfter(d.getCheckInDate())) {
                             return false; // Đã bị giữ chỗ bởi một Request!
                         }
@@ -78,12 +94,12 @@ public class BookingManager {
 
             boolean containsRoom = false;
             if (b instanceof IndividualBooking) {
-                containsRoom = roomId.equals(((IndividualBooking) b).getRoomId());
+                containsRoom = roomId.equalsIgnoreCase(((IndividualBooking) b).getRoomId());
             } else if (b instanceof GroupBooking) {
                 String[] roomIds = ((GroupBooking) b).getRoomIds();
                 if (roomIds != null) {
                     for (String rId : roomIds) {
-                        if (roomId.equals(rId)) {
+                        if (roomId.equalsIgnoreCase(rId)) {
                             containsRoom = true;
                             break;
                         }
@@ -109,7 +125,18 @@ public class BookingManager {
      * Tiếp nhận yêu cầu qua điện thoại/trực tuyến và lưu BookingRequest
      */
     public boolean createBookingRequest(BookingRequest request) {
-        if (request == null) return false;
+        if (request == null || findRequestById(request.getRequestId()) != null
+                || request.getDetailCount() == 0) return false;
+        Set<String> roomIds = new HashSet<>();
+        for (int i = 0; i < request.getDetailCount(); i++) {
+            BookingDetail detail = request.getDetails()[i];
+            if (detail == null || !request.getRequestId().equalsIgnoreCase(detail.getRequestId())
+                    || !request.getExpectedCheckInDate().equals(detail.getCheckInDate())
+                    || !request.getExpectedCheckOutDate().equals(detail.getCheckOutDate())
+                    || !roomIds.add(detail.getOriginalRoomId().toUpperCase(Locale.ROOT))
+                    || !isRoomAvailable(detail.getOriginalRoomId(),
+                            detail.getCheckInDate(), detail.getCheckOutDate())) return false;
+        }
         try {
             requestList.add(request);
             return true;
@@ -124,29 +151,37 @@ public class BookingManager {
     public Deposit processDeposit(String requestId, double amount, PaymentMethod method, 
                                   String receivedBy, String referenceNo) {
         BookingRequest req = findRequestById(requestId);
-        if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT) {
+        if (req == null || req.getRequestStatus() != RequestStatus.PENDING_DEPOSIT
+                || req.isCancellationPending()) {
             return null;
         }
-        // số tiền cọc phải dương (chặn sớm, trước khi tạo mã cọc và đổi dữ liệu)
         CheckingExpression.checkPositiveDouble(amount, "Số tiền cọc phải > 0");
-        // phiếu chưa có dòng phòng nào thì chia cọc sẽ ra Infinity hoặc NaN
-        CheckingExpression.checkDivideByZero(req.getDetailCount(), "Phiếu yêu cầu chưa có phòng nào để chia tiền cọc");
-
-        // Tạo phiếu cọc mới
-        String depositId = generateDepositId();
-        Deposit deposit = new Deposit(depositId, requestId, amount, method, receivedBy, referenceNo);
-        
-        // Phân bổ tiền cọc vào các dòng BookingDetail của Request
-        double depositPerRoom = amount / req.getDetailCount();
-        BookingDetail[] details = req.getDetails();
-        for (int i = 0; i < req.getDetailCount(); i++) {
-            if (details[i] != null) {
-                details[i].setDepositShare(depositPerRoom);
-            }
+        if (!Double.isFinite(amount)) {
+            throw new IllegalArgumentException("Số tiền cọc phải là số hữu hạn");
+        }
+        if (req.getDetailCount() == 0) {
+            throw new IllegalArgumentException("Phiếu yêu cầu chưa có phòng nào để chia tiền cọc");
+        }
+        double requiredAmount = req.calculateRequiredDeposit();
+        if (amount < requiredAmount) {
+            throw new IllegalArgumentException(String.format(
+                    "Tiền cọc chưa đủ. Cần ít nhất %,.0f", requiredAmount));
         }
 
-        // Cập nhật trạng thái Request sang CONFIRMED
+        String depositId = generateDepositId();
+        Deposit deposit = new Deposit(depositId, requestId, amount, method, receivedBy, referenceNo);
+
+        double totalRoomAmount = 0;
+        BookingDetail[] details = req.getDetails();
+        for (int i = 0; i < req.getDetailCount(); i++) {
+            totalRoomAmount += details[i].calculateRoomAmount();
+        }
+        for (int i = 0; i < req.getDetailCount(); i++) {
+            BookingDetail detail = details[i];
+            detail.setDepositShare(amount * detail.calculateRoomAmount() / totalRoomAmount);
+        }
         req.confirmDeposit();
+        deposits.add(deposit);
         return deposit;
     }
 
@@ -177,16 +212,131 @@ public class BookingManager {
      */
     public boolean cancelBookingRequest(String requestId, String reason, boolean refundDeposit, Deposit deposit) {
         BookingRequest req = findRequestById(requestId);
-        if (req == null || !req.isActive()) return false;
+        if (req == null || !req.isActive() || !req.isCancellationPending()) return false;
+        Deposit trackedDeposit = findDepositByRequestId(requestId);
+        if (deposit != trackedDeposit) return false;
 
         req.cancel(reason);
-        if (deposit != null) {
+        if (trackedDeposit != null) {
             if (refundDeposit) {
-                deposit.refund();
+                trackedDeposit.refund();
             } else {
-                deposit.forfeit(); // Tịch thu cọc (mất cọc)
+                trackedDeposit.forfeit(); // Tịch thu cọc (mất cọc)
             }
         }
+        return true;
+    }
+
+    public boolean requestCancellation(String requestId, String reason) {
+        BookingRequest request = findRequestById(requestId);
+        if (request == null || !request.isActive() || request.isCancellationPending()) return false;
+        request.requestCancellation(reason);
+        return true;
+    }
+
+    public boolean rejectCancellation(String requestId) {
+        BookingRequest request = findRequestById(requestId);
+        if (request == null || !request.isCancellationPending()) return false;
+        request.rejectCancellation();
+        return true;
+    }
+
+    public Deposit findDepositByRequestId(String requestId) {
+        if (requestId == null) return null;
+        for (Deposit deposit : deposits.getAll()) {
+            if (requestId.equalsIgnoreCase(deposit.getRequestId())) return deposit;
+        }
+        return null;
+    }
+
+    public Deposit[] getAllDeposits() {
+        return deposits.getAll();
+    }
+
+    public List<BookingRequest> getCancellationRequests() {
+        List<BookingRequest> pending = new ArrayList<>();
+        for (BookingRequest request : requestList.getAll()) {
+            if (request.isCancellationPending()) pending.add(request);
+        }
+        return Collections.unmodifiableList(pending);
+    }
+
+    public List<BookingDetail> getBookingDetails(String bookingId) {
+        List<BookingDetail> result = new ArrayList<>();
+        for (BookingDetail detail : bookingDetails.getAll()) {
+            if (bookingId != null && bookingId.equalsIgnoreCase(detail.getBookingId())) {
+                result.add(detail);
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public Booking createDirectBooking(String customerId, String bookingType, String groupName,
+                                       LocalDate checkIn, LocalDate checkOut, String employeeId,
+                                       String note, BookingDetail[] details) {
+        if (details == null || details.length == 0) {
+            throw new IllegalArgumentException("Đặt phòng phải có ít nhất một phòng");
+        }
+        CheckingExpression.checkValidDateRange(checkIn, checkOut);
+        Set<String> selectedRoomIds = new HashSet<>();
+        for (BookingDetail detail : details) {
+            if (detail == null || detail.getRequestId() != null || detail.getBookingId() != null
+                    || !checkIn.equals(detail.getCheckInDate())
+                    || !checkOut.equals(detail.getCheckOutDate())
+                    || !selectedRoomIds.add(detail.getOriginalRoomId().toUpperCase(Locale.ROOT))
+                    || !isRoomAvailable(detail.getOriginalRoomId(), checkIn, checkOut)) {
+                throw new IllegalArgumentException("Chi tiết phòng không hợp lệ hoặc phòng đã được đặt");
+            }
+        }
+        String bookingId = generateBookingId();
+        Booking booking;
+        if ("GROUP".equalsIgnoreCase(bookingType)) {
+            String[] roomIds = new String[details.length];
+            for (int i = 0; i < details.length; i++) {
+                if (details[i] == null) throw new IllegalArgumentException("Chi tiết phòng không hợp lệ");
+                roomIds[i] = details[i].getOriginalRoomId();
+            }
+            booking = new GroupBooking(bookingId, null, customerId, checkIn, checkOut,
+                    employeeId, note, groupName, roomIds, 20);
+        } else if ("INDIVIDUAL".equalsIgnoreCase(bookingType) && details.length == 1) {
+            BookingDetail detail = details[0];
+            booking = new IndividualBooking(bookingId, null, customerId, checkIn, checkOut,
+                    employeeId, note, detail.getOriginalRoomId(), detail.getGuestCount());
+        } else {
+            throw new IllegalArgumentException("Loại đặt phòng hoặc số phòng không hợp lệ");
+        }
+        if (!addBooking(booking)) return null;
+        for (BookingDetail detail : details) {
+            detail.setBookingId(bookingId);
+            bookingDetails.add(detail);
+        }
+        return booking;
+    }
+
+    public boolean updatePendingRequest(String requestId, BookingDetail[] updatedDetails,
+                                        LocalDate checkIn, LocalDate checkOut) {
+        BookingRequest request = findRequestById(requestId);
+        if (request == null || request.getRequestStatus() != RequestStatus.PENDING_DEPOSIT
+                || request.isCancellationPending() || updatedDetails == null
+                || updatedDetails.length != request.getDetailCount()) return false;
+        CheckingExpression.checkValidDateRange(checkIn, checkOut);
+        Set<String> roomIds = new HashSet<>();
+        for (BookingDetail detail : updatedDetails) {
+            if (detail == null || !requestId.equalsIgnoreCase(detail.getRequestId())
+                    || !checkIn.equals(detail.getCheckInDate())
+                    || !checkOut.equals(detail.getCheckOutDate())
+                    || !roomIds.add(detail.getOriginalRoomId().toUpperCase(Locale.ROOT))
+                    || !isRoomAvailable(detail.getOriginalRoomId(), checkIn, checkOut, requestId)) {
+                return false;
+            }
+        }
+        for (int i = 0; i < updatedDetails.length; i++) {
+            BookingDetail updated = updatedDetails[i];
+            request.getDetails()[i].updateReservation(updated.getOriginalRoomId(),
+                    updated.getGuestCount(), updated.getBookingUnitPrice(), checkIn, checkOut);
+        }
+        request.setExpectedCheckInDate(checkIn);
+        request.setExpectedCheckOutDate(checkOut);
         return true;
     }
 
@@ -199,7 +349,8 @@ public class BookingManager {
      */
     public Booking convertRequestToBooking(String requestId, String employeeId, String note) {
         BookingRequest req = findRequestById(requestId);
-        if (req == null || req.getRequestStatus() != RequestStatus.CONFIRMED) {
+        if (req == null || req.getRequestStatus() != RequestStatus.CONFIRMED
+                || req.isCancellationPending()) {
             return null;
         }
 
@@ -213,7 +364,6 @@ public class BookingManager {
             BookingDetail[] details = req.getDetails();
             for (int i = 0; i < req.getDetailCount(); i++) {
                 roomIds[i] = details[i].getOriginalRoomId();
-                details[i].setBookingId(bookingId);
             }
             // Truyền đúng 10 tham số chuẩn của GroupBooking
             booking = new GroupBooking(bookingId, req.getRequestId(), req.getCustomerId(), 
@@ -223,7 +373,6 @@ public class BookingManager {
             // chặn truy cập details[0] khi phiếu chưa có dòng nào (tránh NullPointerException)
             CheckingExpression.checkValidArrayIndex(0, req.getDetailCount());
             BookingDetail detail = req.getDetails()[0];
-            detail.setBookingId(bookingId);
             // Truyền đúng 9 tham số chuẩn của IndividualBooking
             booking = new IndividualBooking(bookingId, req.getRequestId(), req.getCustomerId(), 
                     req.getExpectedCheckInDate(), req.getExpectedCheckOutDate(), 
@@ -231,7 +380,14 @@ public class BookingManager {
         }
 
         if (addBooking(booking)) {
-            req.markConverted();
+            for (int i = 0; i < req.getDetailCount(); i++) {
+                BookingDetail detail = req.getDetails()[i];
+                detail.setBookingId(bookingId);
+                bookingDetails.add(detail);
+            }
+            Deposit deposit = findDepositByRequestId(requestId);
+            if (deposit != null) deposit.markApplied(bookingId);
+            req.convert();
             return booking;
         }
         return null;
@@ -260,6 +416,13 @@ public class BookingManager {
 
     public Booking[] getAllBookings() {
         return bookingList.getAll();
+    }
+
+    public boolean cancelBookingById(String bookingId) {
+        Booking booking = findBookingById(bookingId);
+        if (booking == null || booking.getStatus() != BookingStatus.CONFIRMED) return false;
+        booking.cancel();
+        return true;
     }
 
     /**

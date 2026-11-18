@@ -83,4 +83,11 @@ public class Discount implements Invoice.InvoiceAdjustment {
             Double.parseDouble(p[3].trim()), p[4].trim(), p[5].trim()
         );
     }
+
+    public String getDiscountId() { return discountId; }
+    public String getInvoiceId() { return invoiceId; }
+    public Invoice.DiscountType getDiscountType() { return discountType; }
+    public double getValue() { return value; }
+    public String getReason() { return reason; }
+    public String getApprovedBy() { return approvedBy; }
 }

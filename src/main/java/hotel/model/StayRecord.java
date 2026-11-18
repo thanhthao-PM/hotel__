@@ -231,22 +231,66 @@ public class StayRecord {
     public StayStatus getStatus() { return status; }
     public boolean isActive() { return status == StayStatus.ACTIVE; }
 
-    // ---------- file (khách và dịch vụ có file riêng) ----------
+    // ---------- file ----------
     public String toFileLine() {
-        return String.join("|", stayId, bookingId, bookingDetailId, roomId,
+        String guestIds = String.join(";", getGuestIds());
+        return String.join("|", stayId, bookingId, bookingDetailId, roomId, guestIds,
                 actualCheckIn == null ? "" : actualCheckIn.toString(),
                 actualCheckOut == null ? "" : actualCheckOut.toString(), status.name());
+    }
+
+    public String toFileString() {
+        return toFileLine();
     }
 
     public static StayRecord fromFileLine(String line) {
         // dòng file không được null hoặc rỗng
         CheckingExpression.checkNotNullOrEmpty(line, "Dòng dữ liệu StayRecord không được để trống");
         String[] f = line.split("\\|", -1);
-        if (f.length != 7) throw new IllegalArgumentException("Sai số trường (cần 7, có " + f.length + ")");
-        for (int i = 0; i < 4; i++) if (f[i].isEmpty()) throw new IllegalArgumentException("Thiếu mã ở trường " + (i + 1));
-        return new StayRecord(f[0], f[1], f[2], f[3],
-                f[4].isEmpty() ? null : LocalDateTime.parse(f[4]),
-                f[5].isEmpty() ? null : LocalDateTime.parse(f[5]), StayStatus.valueOf(f[6]));
+        if (f.length == 8) {
+            for (int i = 0; i < 4; i++) {
+                if (f[i].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã ở trường " + (i + 1));
+            }
+            StayRecord record = new StayRecord(
+                    f[0].trim(),
+                    f[1].trim(),
+                    f[2].trim(),
+                    f[3].trim(),
+                    f[5].trim().isEmpty() ? null : LocalDateTime.parse(f[5].trim()),
+                    f[6].trim().isEmpty() ? null : LocalDateTime.parse(f[6].trim()),
+                    StayStatus.valueOf(f[7].trim())
+            );
+            String guestIdsStr = f[4].trim();
+            if (!guestIdsStr.isEmpty()) {
+                String[] gIds = guestIdsStr.split(";");
+                for (String gId : gIds) {
+                    String cleanId = gId.trim();
+                    if (!cleanId.isEmpty()) {
+                        boolean isCustomer = cleanId.startsWith("CU") || !cleanId.startsWith("GM");
+                        record.loadGuest(new StayGuest(record.getStayId(), cleanId, isCustomer));
+                    }
+                }
+            }
+            return record;
+        } else if (f.length == 7) {
+            for (int i = 0; i < 4; i++) {
+                if (f[i].trim().isEmpty()) throw new IllegalArgumentException("Thiếu mã ở trường " + (i + 1));
+            }
+            return new StayRecord(
+                    f[0].trim(),
+                    f[1].trim(),
+                    f[2].trim(),
+                    f[3].trim(),
+                    f[4].trim().isEmpty() ? null : LocalDateTime.parse(f[4].trim()),
+                    f[5].trim().isEmpty() ? null : LocalDateTime.parse(f[5].trim()),
+                    StayStatus.valueOf(f[6].trim())
+            );
+        }
+        throw new IllegalArgumentException("Sai số trường (cần 7 hoặc 8, có " + f.length + ")");
+    }
+
+    public static StayRecord fromFileString(String line) {
+        return fromFileLine(line);
     }
 
     public String getInfo() {

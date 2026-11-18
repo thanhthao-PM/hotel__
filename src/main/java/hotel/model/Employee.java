@@ -6,7 +6,7 @@ import hotel.model.enums.Gender;
 
 public class Employee extends Person {
 
-    private static final String PREFIX   = "NV";        // tiền tố mã: NV001, NV002...
+    private static final String PREFIX   = "EM";        // tiền tố mã: EM001, EM002...
     private static final String TYPE_TAG = "EMPLOYEE";  // nhãn loại ghi ở đầu dòng file
     private static final String SEP      = "|";         // ký tự ngăn cách
 

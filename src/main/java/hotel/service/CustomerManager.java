@@ -5,10 +5,10 @@ import hotel.model.GuestMember;
 import hotel.model.Person;
 import hotel.storage.IFileHandler;
 import hotel.util.CheckingExpression;
+import hotel.util.FileUtil;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,7 +17,7 @@ import java.nio.file.Paths;
 
 public class CustomerManager implements IManager<Person>, IFileHandler {
 
-    private static final String FILE_PATH = "data/customer.txt";
+    private static final String FILE_PATH = "file/customer.txt";
     private static final int INITIAL_CAPACITY = 10;
 
     private Person[] items;
@@ -267,16 +267,12 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
 
     @Override
     public void writeFile() {
-        Path path = Paths.get(FILE_PATH);
+        String[] lines = new String[count];
+        for (int i = 0; i < count; i++) {
+            lines[i] = items[i].toFileString();
+        }
         try {
-            Path parent = path.getParent();
-            if (parent != null) Files.createDirectories(parent);
-            try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-                for (int i = 0; i < count; i++) {
-                    writer.write(items[i].toFileString());
-                    writer.newLine();
-                }
-            }
+            FileUtil.writeAllLines(FILE_PATH, lines, count);
         } catch (IOException ex) {
             System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
         }

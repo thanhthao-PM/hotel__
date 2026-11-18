@@ -63,4 +63,14 @@ public class Deposit {
     public String getReceivedBy() { return receivedBy; }
     public String getReferenceNo() { return referenceNo; }
     public DepositStatus getStatus() { return status; }
+
+    public void setDepositId(String depositId) { this.depositId = depositId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
+    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
+    public void setAmount(double amount) { this.amount = amount; }
+    public void setMethod(PaymentMethod method) { this.method = method; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public void setReceivedBy(String receivedBy) { this.receivedBy = receivedBy; }
+    public void setReferenceNo(String referenceNo) { this.referenceNo = referenceNo; }
+    public void setStatus(DepositStatus status) { this.status = status; }
 }
