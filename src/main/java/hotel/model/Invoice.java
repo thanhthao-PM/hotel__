@@ -98,6 +98,8 @@ public class Invoice {
     // Hàm 'get' để lấy giá trị ra xem (nhưng không được sửa)
     public String getInvoiceId() { return invoiceId; }
     public String getStayId() { return stayId; }
+    public LocalDateTime getIssuedAt() { return issuedAt; }
+    public String getIssuedBy() { return issuedBy; }
     public InvoiceStatus getStatus() { return status; }
     public double getDepositApplied() { return depositApplied; }
 

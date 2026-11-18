@@ -35,4 +35,10 @@ public class ExtraCharge implements Invoice.InvoiceAdjustment {
     public double getAdjustmentAmount() {
         return amount; 
     }
+
+    public String getChargeId() { return chargeId; }
+    public String getInvoiceId() { return invoiceId; }
+    public String getReason() { return reason; }
+    public double getAmount() { return amount; }
+    public String getCreatedBy() { return createdBy; }
 }

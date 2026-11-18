@@ -28,6 +28,10 @@ public class FileUtil {
 
     // Ghép nhiều trường thành một dòng, ngăn cách bằng SEPARATOR
     public static String join(Object... fields) {
+        // fields null (gọi join((Object[]) null)) sẽ gây NullPointerException ở fields.length
+        if (fields == null) {
+            throw new IllegalArgumentException("Danh sách trường cần ghép không được null");
+        }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < fields.length; i++) {
             if (i > 0) {
@@ -40,6 +44,10 @@ public class FileUtil {
 
     // Tách một dòng thành các trường (giữ cả trường rỗng ở cuối dòng)
     public static String[] split(String line) {
+        // line null sẽ gây NullPointerException ở line.split(...)
+        if (line == null) {
+            throw new IllegalArgumentException("Dòng dữ liệu không được null");
+        }
         return line.split("\\|", -1);
     }
 
@@ -61,6 +69,8 @@ public class FileUtil {
 
     // Đọc toàn bộ dòng của file (UTF-8), bỏ dòng trống; file chưa có thì trả danh sách rỗng
     public static ArrayList<String> readLines(String path) throws IOException {
+        // đường dẫn không được rỗng (Paths.get(null) gây NullPointerException)
+        CheckingExpression.checkNotNullOrEmpty(path, "Đường dẫn file không được để trống");
         ArrayList<String> result = new ArrayList<>();
         Path p = Paths.get(path);
         if (!Files.exists(p)) {
@@ -76,6 +86,11 @@ public class FileUtil {
 
     // Ghi danh sách dòng xuống file (UTF-8), tự tạo thư mục và sao lưu file cũ thành .bak
     public static void writeLines(String path, ArrayList<String> lines) throws IOException {
+        // kiểm tra trước khi động đến file, tránh ghi đè file cũ bằng dữ liệu hỏng
+        CheckingExpression.checkNotNullOrEmpty(path, "Đường dẫn file không được để trống");
+        if (lines == null) {
+            throw new IllegalArgumentException("Danh sách dòng cần ghi không được null");
+        }
         Path p = Paths.get(path);
         if (p.getParent() != null) {
             Files.createDirectories(p.getParent());
@@ -91,6 +106,16 @@ public class FileUtil {
     }
 
     public static void writeAllLines(String path, String[] lines, int count) throws IOException {
+        // kiểm tra đường dẫn, mảng và số phần tử trước khi động đến file
+        CheckingExpression.checkNotNullOrEmpty(path, "Đường dẫn file không được để trống");
+        if (lines == null) {
+            throw new IllegalArgumentException("Mảng dòng cần ghi không được null");
+        }
+        CheckingExpression.checkNonNegativeInt(count, "Số dòng cần ghi không được âm");
+        if (count > lines.length) {
+            throw new IllegalArgumentException("Số dòng cần ghi (" + count + ") lớn hơn kích thước mảng (" + lines.length + ")");
+        }
+
         Path p = Paths.get(path);
         if (p.getParent() != null) {
             Files.createDirectories(p.getParent());

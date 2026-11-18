@@ -77,4 +77,11 @@ public class InvoiceDetail {
     
     // Getter lấy loại dòng (được giữ lại từ nhánh cũ để đảm bảo không lỗi)
     public Invoice.LineType getLineType() { return lineType; }
+
+    public String getDetailId() { return detailId; }
+    public String getInvoiceId() { return invoiceId; }
+    public String getDescription() { return description; }
+    public String getRoomId() { return roomId; }
+    public String getServiceId() { return serviceId; }
+    public String getUsageId() { return usageId; }
 }

@@ -50,6 +50,32 @@ public abstract class Booking {
         this.status = BookingStatus.CANCELLED;
     }
 
+    /**
+     * Đổi trạng thái có kiểm soát, trả false nếu chuyển không hợp lệ.
+     * CONFIRMED -> CHECKED_IN, CANCELLED, NO_SHOW; CHECKED_IN -> COMPLETED. Các trạng thái khác là điểm cuối.
+     */
+    public boolean changeStatus(BookingStatus newStatus) {
+        if (newStatus == null || newStatus == status) return false;
+        switch (status) {
+            case CONFIRMED:
+                if (newStatus == BookingStatus.CHECKED_IN
+                        || newStatus == BookingStatus.CANCELLED
+                        || newStatus == BookingStatus.NO_SHOW) {
+                    status = newStatus;
+                    return true;
+                }
+                return false;
+            case CHECKED_IN:
+                if (newStatus == BookingStatus.COMPLETED) {
+                    status = newStatus;
+                    return true;
+                }
+                return false;
+            default:
+                return false;
+        }
+    }
+
     // --- GETTERS & SETTERS ---
     public String getBookingId() { return bookingId; }
     public String getRequestId() { return requestId; }
@@ -57,4 +83,18 @@ public abstract class Booking {
     public LocalDate getCheckInDate() { return checkInDate; }
     public LocalDate getExpectedCheckOutDate() { return expectedCheckOutDate; }
     public BookingStatus getStatus() { return status; }
+    public String getCreatedBy() { return createdBy; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getNote() { return note; }
+
+    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
+    public void setRequestID(String requestId) { this.requestId = requestId; }
+    public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    public void setExpectedCheckOutDate(LocalDate expectedCheckOutDate) { this.expectedCheckOutDate = expectedCheckOutDate; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public void setNote(String note) { this.note = note; }
 }

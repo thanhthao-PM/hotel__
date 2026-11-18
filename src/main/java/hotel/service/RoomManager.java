@@ -3,7 +3,7 @@ package hotel.service;
 import hotel.model.Room;
 import hotel.model.RoomMaintenance;
 import hotel.model.StandardRoom;
-import hotel.model.VIPRoom;
+import hotel.model.VipRoom;
 import hotel.model.enums.RoomStatus;
 import hotel.util.CheckingExpression;
 import hotel.storage.IFileHandler;
@@ -156,7 +156,7 @@ public class RoomManager implements IManager<Room>, IFileHandler {
         CheckingExpression.checkNotNullOrEmpty(type, "Loại phòng không được để trống (VIP hoặc STANDARD)");
         ArrayList<Room> result = new ArrayList<>();
         for (Room r : rooms) {
-            boolean isVip = r instanceof VIPRoom;
+            boolean isVip = r instanceof VipRoom;
             if ((type.equalsIgnoreCase("VIP") && isVip)
                     || (type.equalsIgnoreCase("STANDARD") && !isVip)) {
                 result.add(r);
@@ -420,7 +420,7 @@ public class RoomManager implements IManager<Room>, IFileHandler {
         RoomStatus status = RoomStatus.valueOf(p[6]);
         boolean active = Boolean.parseBoolean(p[7]);
         if (type.equals("VIP")) {
-            return new VIPRoom(id, number, floor, capacity, price, status, active,
+            return new VipRoom(id, number, floor, capacity, price, status, active,
                     Double.parseDouble(p[8]), p[9], p[10]);
         }
         return new StandardRoom(id, number, floor, capacity, price, status, active,
