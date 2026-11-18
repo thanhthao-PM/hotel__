@@ -1,54 +1,36 @@
 package hotel.model;
 
 import hotel.util.CheckingExpression;
+import hotel.util.FileUtil;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-// [OOP - CLASS]: Đây là bản vẽ để tạo ra các đối tượng Hóa đơn.
 public class Invoice {
 
-    // ----------------------------------------------------------------------
-    // 1. NESTED ENUM & INTERFACE (Khai báo lồng bên trong class để không tạo file mới)
-    // ----------------------------------------------------------------------
-    
-    // Enum giống như một "Danh sách các lựa chọn cố định". 
-    // Trạng thái hóa đơn chỉ được phép là 1 trong 4 chữ này, không được nhập bậy bạ.
-    public enum InvoiceStatus { OPEN, PARTIALLY_PAID, PAID, CANCELLED } 
-    
-    // Phương thức thanh toán: Tiền mặt, Thẻ, Chuyển khoản
-    public enum PaymentMethod { CASH, CARD, TRANSFER } 
-    
-    public enum DiscountType { PERCENT, FIXED } 
-    public enum LineType { ROOM, SERVICE } 
+    public enum InvoiceStatus { OPEN, PARTIALLY_PAID, PAID, CANCELLED }
+    public enum PaymentMethod { CASH, CARD, TRANSFER }
+    public enum DiscountType { PERCENT, FIXED }
+    public enum LineType { ROOM, SERVICE }
 
-    // [OOP - INTERFACE]: Interface giống như một "Bản hợp đồng".
-    // Ai ký bản hợp đồng này (implements) thì BẮT BUỘC phải có hàm getAdjustmentAmount().
-    // Lát nữa Giảm giá (Discount) và Phụ thu (ExtraCharge) sẽ ký hợp đồng này.
-    public interface InvoiceAdjustment { 
-        double getAdjustmentAmount(); 
-    } 
+    public interface InvoiceAdjustment {
+        double getAdjustmentAmount();
+        default double getAdjustmentAmount(double baseAmount) {
+            return getAdjustmentAmount();
+        }
+    }
 
+    public static final DateTimeFormatter FILE_DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    public static int nextNumber = 1;
 
-    // ----------------------------------------------------------------------
-    // 2. THUỘC TÍNH (ATTRIBUTES) - Những thông tin mà Hóa đơn lưu giữ
-    // ----------------------------------------------------------------------
-    
-    // [OOP - STATIC]: Biến static là biến "dùng chung" cho toàn bộ các hóa đơn.
-    // Khi tạo hóa đơn thứ 1, nó lấy số 1 rồi tăng lên 2. Hóa đơn thứ 2 sẽ lấy số 2.
-    public static int nextNumber = 1; 
-    
-    // [OOP - ĐÓNG GÓI (Encapsulation)]: Các biến dùng chữ 'private' (riêng tư).
-    // Giống như việc cất tiền vào két sắt. Người ngoài không thể tự do sửa mã hóa đơn được.
     private String invoiceId;
     private String stayId;
-    private LocalDateTime issuedAt; // Ngày giờ xuất hóa đơn
+    private LocalDateTime issuedAt;
     private String issuedBy;
     private InvoiceStatus status;
-    private double depositApplied;  // Tiền cọc đã áp dụng
+    private double depositApplied;
 
-    // [OOP - MẢNG ĐỐI TƯỢNG (Array)]: Một tờ hóa đơn thực tế có nhiều dòng ghi tiền phòng, dịch vụ.
-    // Mảng (Array) giống như một cái kệ có 20 ngăn, mỗi ngăn chứa 1 dòng chi tiết hóa đơn (InvoiceDetail).
     private InvoiceDetail[] details = new InvoiceDetail[20];
-    private int detailCount = 0; // Biến này đếm xem cái kệ đã để được bao nhiêu dòng rồi.
+    private int detailCount = 0;
 
     private Discount[] discounts = new Discount[5];
     private int discountCount = 0;
@@ -62,75 +44,105 @@ public class Invoice {
     private RefundRecord[] refunds = new RefundRecord[5];
     private int refundCount = 0;
 
-
-    // ----------------------------------------------------------------------
-    // 3. CONSTRUCTOR (HÀM TẠO) - Hàm chạy đầu tiên khi "đúc" ra đối tượng
-    // ----------------------------------------------------------------------
-    // Khi bạn gõ từ khóa 'new Invoice(...)', hàm này sẽ chạy để thiết lập thông tin ban đầu.
+    // Constructor tạo hóa đơn mới
     public Invoice(String stayId, String issuedBy, double depositApplied) {
-        // Trước khi tạo, ta gọi người bảo vệ (CheckingExpression) ra kiểm tra dữ liệu xem có rỗng không.
-        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lưu trú không được trống"); 
-        //phải biết nhân viên nào lập hóa đơn (đặt trước dòng tăng nextNumber để không nhảy mã khi lỗi)
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lưu trú không được trống");
         CheckingExpression.checkNotNullOrEmpty(issuedBy, "Mã nhân viên lập hóa đơn không được trống");
-        
-        this.invoiceId = "INV" + (nextNumber++); // Tự động tạo mã: INV1, INV2...
-        this.stayId = stayId;
-        this.issuedAt = LocalDateTime.now(); // Lấy giờ hiện tại của máy tính
-        this.issuedBy = issuedBy;
-        this.status = InvoiceStatus.OPEN; // Hóa đơn mới tạo mặc định trạng thái là OPEN (Đang mở)
-        
-        // Thay vì gán thẳng (this.depositApplied = depositApplied), 
-        // ta gọi hàm setter bên dưới để nó kiểm tra tiền cọc có bị âm hay không.
-        setDepositApplied(depositApplied); 
-    }
+        CheckingExpression.checkNonNegativeDouble(depositApplied, "Tiền cọc áp dụng không được âm");
 
-
-    // ----------------------------------------------------------------------
-    // 4. GETTER & SETTER - Các "Cửa ngõ" để giao tiếp với Két sắt (private)
-    // ----------------------------------------------------------------------
-    // Hàm 'set' để thay đổi giá trị (có kiểm tra an toàn)
-    public void setDepositApplied(double depositApplied) {
-        // Bảo vệ chặn không cho nhập tiền âm. Nếu nhập âm, nó sẽ báo lỗi và dừng chương trình ngay.
-        CheckingExpression.checkNonNegativeDouble(depositApplied, "Tiền cọc áp dụng không được âm"); 
+        this.invoiceId = String.format("IV%03d", nextNumber++);
+        this.stayId = stayId.trim();
+        this.issuedAt = LocalDateTime.now();
+        this.issuedBy = issuedBy.trim();
+        this.status = InvoiceStatus.OPEN;
         this.depositApplied = depositApplied;
     }
 
-    // Hàm 'get' để lấy giá trị ra xem (nhưng không được sửa)
+    // Constructor nạp từ file
+    public Invoice(String invoiceId, String stayId, LocalDateTime issuedAt,
+                   String issuedBy, InvoiceStatus status, double depositApplied) {
+        CheckingExpression.checkNotNullOrEmpty(invoiceId, "Mã hóa đơn không được trống");
+        CheckingExpression.checkNotNullOrEmpty(stayId, "Mã lưu trú không được trống");
+        CheckingExpression.checkNotNullOrEmpty(issuedBy, "Mã nhân viên lập hóa đơn không được trống");
+        CheckingExpression.checkNonNegativeDouble(depositApplied, "Tiền cọc áp dụng không được âm");
+        if (status == null) {
+            throw new IllegalArgumentException("Trạng thái hóa đơn không được null");
+        }
+
+        this.invoiceId = invoiceId.trim();
+        this.stayId = stayId.trim();
+        this.issuedAt = (issuedAt != null) ? issuedAt : LocalDateTime.now();
+        this.issuedBy = issuedBy.trim();
+        this.status = status;
+        this.depositApplied = depositApplied;
+        updateNextNumber(this.invoiceId);
+    }
+
+    public static void updateNextNumber(String id) {
+        int num = FileUtil.extractNumber(id);
+        if (num >= nextNumber) {
+            nextNumber = num + 1;
+        }
+    }
+
+    public static String formatMoney(double value) {
+        if (value == Math.floor(value) && !Double.isInfinite(value)) {
+            return String.format("%.0f", value);
+        }
+        return String.valueOf(value);
+    }
+
+    public void setDepositApplied(double depositApplied) {
+        CheckingExpression.checkNonNegativeDouble(depositApplied, "Tiền cọc áp dụng không được âm");
+        this.depositApplied = depositApplied;
+    }
+
     public String getInvoiceId() { return invoiceId; }
     public String getStayId() { return stayId; }
+    public LocalDateTime getIssuedAt() { return issuedAt; }
+    public String getIssuedBy() { return issuedBy; }
     public InvoiceStatus getStatus() { return status; }
     public double getDepositApplied() { return depositApplied; }
 
-
-    // ----------------------------------------------------------------------
-    // 5. CÁC HÀM XỬ LÝ NGHIỆP VỤ & ĐA HÌNH (POLYMORPHISM)
-    // ----------------------------------------------------------------------
-    
-    // Hàm tính TỔNG TIỀN hóa đơn
-    public double calculateTotal() {
-        double total = 0;
-        
-        // 1. Dùng vòng lặp (for) chạy qua từng ngăn trên kệ details để cộng tiền lại. (Lưu ý: Mảng bắt đầu từ 0)
+    // Tiền phòng + Tiền dịch vụ
+    public double calculateDetailsTotal() {
+        double sum = 0;
         for (int i = 0; i < detailCount; i++) {
-            total += details[i].getAmount();
+            sum += details[i].getAmount();
         }
-        
-        // 2. [OOP - ĐA HÌNH]: Đây là điểm ăn tiền của đồ án!
-        // ExtraCharge (Phụ thu) và Discount (Giảm giá) đều ký bản hợp đồng InvoiceAdjustment.
-        // Ta chỉ việc gọi hàm getAdjustmentAmount().
-        // Thằng Phụ thu đã viết sẵn bên trong nó là trả về SỐ DƯƠNG (cộng thêm tiền).
-        for (int i = 0; i < extraChargeCount; i++) {
-            total += extraCharges[i].getAdjustmentAmount(); 
-        }
-        
-        // Thằng Giảm giá đã viết sẵn bên trong nó là trả về SỐ ÂM (trừ bớt tiền).
-        for (int i = 0; i < discountCount; i++) {
-            total += discounts[i].getAdjustmentAmount(); 
-        }
-        return total;
+        return sum;
     }
 
-    // Hàm tính tổng số tiền khách ĐÃ TRẢ (khách có thể trả làm nhiều lần)
+    // Tổng phụ thu (số dương)
+    public double calculateExtraChargeTotal() {
+        double sum = 0;
+        for (int i = 0; i < extraChargeCount; i++) {
+            sum += extraCharges[i].getAdjustmentAmount();
+        }
+        return sum;
+    }
+
+    // Tổng giảm giá (trả về số âm nhờ đa hình; PERCENT tính trên tiền phòng + dịch vụ + phụ thu)
+    public double calculateDiscountTotal() {
+        double base = calculateDetailsTotal() + calculateExtraChargeTotal();
+        double sum = 0;
+        for (int i = 0; i < discountCount; i++) {
+            sum += discounts[i].getAdjustmentAmount(base);
+        }
+        return sum;
+    }
+
+    // Tổng tiền hóa đơn = (tiền phòng + dịch vụ + phụ thu) + giảm giá (số âm)
+    public double calculateTotal() {
+        double base = calculateDetailsTotal() + calculateExtraChargeTotal();
+        double total = base;
+        for (int i = 0; i < discountCount; i++) {
+            total += discounts[i].getAdjustmentAmount(base);
+        }
+        return Math.max(0, total);
+    }
+
+    // Tổng số tiền khách đã thanh toán
     public double calculatePaid() {
         double paid = 0;
         for (int i = 0; i < paymentCount; i++) {
@@ -139,56 +151,227 @@ public class Invoice {
         return paid;
     }
 
-    // Hàm tính số tiền khách CÒN NỢ (Phải thu)
-    public double calculateRemaining() {
-        // Tiền còn nợ = Tổng tiền - Tiền cọc (đã đưa trước đó) - Tiền đã thanh toán
-        return calculateTotal() - depositApplied - calculatePaid(); 
+    // Tổng số tiền đã hoàn lại cho khách
+    public double calculateRefunded() {
+        double refunded = 0;
+        for (int i = 0; i < refundCount; i++) {
+            refunded += refunds[i].getAmount();
+        }
+        return refunded;
     }
 
-    // Hàm thêm một Lần thanh toán vào mảng
-    public void addPayment(Payment payment) {
-        // không cho thêm phiếu thanh toán null
-        checkNotNullObject(payment, "Phiếu thanh toán không được null");
-        // Kiểm tra xem kệ (mảng) còn chỗ trống không
-        if (paymentCount < payments.length) {
-            payments[paymentCount++] = payment; // Đặt phiếu thanh toán vào ngăn trống và tăng biến đếm
-            
-            // Logic cập nhật trạng thái: Nếu nợ <= 0 thì đã trả xong (PAID), ngược lại là mới trả một phần (PARTIALLY_PAID)
-            if (calculateRemaining() <= 0) {
-                this.status = InvoiceStatus.PAID;
-            } else {
-                this.status = InvoiceStatus.PARTIALLY_PAID;
-            }
+    // Số tiền khách còn nợ (âm nghĩa là khách cọc/trả dư -> cần hoàn tiền)
+    public double calculateRemaining() {
+        return calculateTotal() - depositApplied - calculatePaid() + calculateRefunded();
+    }
+
+    private void ensureNotCancelled() {
+        if (this.status == InvoiceStatus.CANCELLED) {
+            throw new IllegalStateException("Hóa đơn " + invoiceId + " đã bị hủy, không thể thao tác thêm");
         }
     }
 
-    // Các hàm thêm khác vào mảng (tương tự addPayment)
-    public void addDetail(InvoiceDetail detail) {
-        checkNotNullObject(detail, "Dòng chi tiết hóa đơn không được null");
-        if (detailCount < details.length) details[detailCount++] = detail;
-    }
-    public void addDiscount(Discount discount) {
-        checkNotNullObject(discount, "Giảm giá không được null");
-        if (discountCount < discounts.length) discounts[discountCount++] = discount;
-    }
-    public void addExtraCharge(ExtraCharge charge) {
-        checkNotNullObject(charge, "Phụ thu không được null");
-        if (extraChargeCount < extraCharges.length) extraCharges[extraChargeCount++] = charge;
-    }
-    public void addRefund(RefundRecord refund) {
-        checkNotNullObject(refund, "Phiếu hoàn tiền không được null");
-        if (refundCount < refunds.length) refunds[refundCount++] = refund;
-    }
-    // kiểm tra đối tượng khác null (CheckingExpression chưa có hàm này)
     private static void checkNotNullObject(Object obj, String errorMessage) {
         if (obj == null) {
             throw new IllegalArgumentException(errorMessage);
         }
     }
 
-    // Hàm Hủy hóa đơn
+    public void addDetail(InvoiceDetail detail) {
+        ensureNotCancelled();
+        addDetailFromFile(detail);
+    }
+
+    public void addDetailFromFile(InvoiceDetail detail) {
+        checkNotNullObject(detail, "Dòng chi tiết hóa đơn không được null");
+        if (detailCount >= details.length) {
+            InvoiceDetail[] grown = new InvoiceDetail[details.length * 2];
+            System.arraycopy(details, 0, grown, 0, detailCount);
+            details = grown;
+        }
+        details[detailCount++] = detail;
+    }
+
+    public void addExtraCharge(ExtraCharge charge) {
+        ensureNotCancelled();
+        addExtraChargeFromFile(charge);
+    }
+
+    public void addExtraChargeFromFile(ExtraCharge charge) {
+        checkNotNullObject(charge, "Phụ thu không được null");
+        if (extraChargeCount >= extraCharges.length) {
+            ExtraCharge[] grown = new ExtraCharge[extraCharges.length * 2];
+            System.arraycopy(extraCharges, 0, grown, 0, extraChargeCount);
+            extraCharges = grown;
+        }
+        extraCharges[extraChargeCount++] = charge;
+    }
+
+    public void addDiscount(Discount discount) {
+        ensureNotCancelled();
+        addDiscountFromFile(discount);
+    }
+
+    public void addDiscountFromFile(Discount discount) {
+        checkNotNullObject(discount, "Giảm giá không được null");
+        if (discountCount >= discounts.length) {
+            Discount[] grown = new Discount[discounts.length * 2];
+            System.arraycopy(discounts, 0, grown, 0, discountCount);
+            discounts = grown;
+        }
+        discounts[discountCount++] = discount;
+    }
+
+    public void addPayment(Payment payment) {
+        ensureNotCancelled();
+        addPaymentFromFile(payment);
+        if (calculateRemaining() <= 0) {
+            this.status = InvoiceStatus.PAID;
+        } else {
+            this.status = InvoiceStatus.PARTIALLY_PAID;
+        }
+    }
+
+    public void addPaymentFromFile(Payment payment) {
+        checkNotNullObject(payment, "Phiếu thanh toán không được null");
+        if (paymentCount >= payments.length) {
+            Payment[] grown = new Payment[payments.length * 2];
+            System.arraycopy(payments, 0, grown, 0, paymentCount);
+            payments = grown;
+        }
+        payments[paymentCount++] = payment;
+    }
+
+    public void addRefund(RefundRecord refund) {
+        checkNotNullObject(refund, "Phiếu hoàn tiền không được null");
+        double maxRefundable = calculatePaid() + depositApplied - calculateRefunded();
+        if (refund.getAmount() > maxRefundable) {
+            throw new IllegalArgumentException(
+                "Số tiền hoàn (" + formatMoney(refund.getAmount()) + ") vượt quá tổng có thể hoàn (" + formatMoney(maxRefundable) + ")");
+        }
+        addRefundFromFile(refund);
+        if (this.status != InvoiceStatus.CANCELLED && calculateRemaining() <= 0) {
+            this.status = InvoiceStatus.PAID;
+        }
+    }
+
+    public void addRefundFromFile(RefundRecord refund) {
+        checkNotNullObject(refund, "Phiếu hoàn tiền không được null");
+        if (refundCount >= refunds.length) {
+            RefundRecord[] grown = new RefundRecord[refunds.length * 2];
+            System.arraycopy(refunds, 0, grown, 0, refundCount);
+            refunds = grown;
+        }
+        refunds[refundCount++] = refund;
+    }
+
     public void cancel(String reason) {
-        CheckingExpression.checkNotNullOrEmpty(reason, "Phải có lý do hủy hóa đơn"); 
+        CheckingExpression.checkNotNullOrEmpty(reason, "Phải có lý do hủy hóa đơn");
+        if (this.status == InvoiceStatus.CANCELLED) {
+            throw new IllegalStateException("Hóa đơn đã bị hủy trước đó");
+        }
         this.status = InvoiceStatus.CANCELLED;
     }
+
+    public String toFileString() {
+        return FileUtil.join(
+            invoiceId,
+            stayId,
+            issuedAt.format(FILE_DT_FORMAT),
+            issuedBy,
+            status.name(),
+            formatMoney(depositApplied)
+        );
+    }
+
+    public static Invoice fromFileString(String line) {
+        String[] p = FileUtil.split(line);
+        if (p.length < 6) {
+            throw new IllegalArgumentException("Dòng dữ liệu hóa đơn không hợp lệ: " + line);
+        }
+        LocalDateTime time = LocalDateTime.parse(p[2].trim());
+        InvoiceStatus st = InvoiceStatus.valueOf(p[4].trim());
+        double deposit = Double.parseDouble(p[5].trim());
+        return new Invoice(p[0].trim(), p[1].trim(), time, p[3].trim(), st, deposit);
+    }
+
+    public void printReceipt() {
+        System.out.println("\n==================== HÓA ĐƠN [" + invoiceId + "] ====================");
+        System.out.println("Mã lưu trú  : " + stayId);
+        System.out.println("Ngày lập    : " + issuedAt.format(FILE_DT_FORMAT));
+        System.out.println("Nhân viên   : " + issuedBy);
+        System.out.println("Trạng thái  : " + status);
+
+        System.out.println("\n--- Chi tiết tiền phòng & dịch vụ ---");
+        if (detailCount == 0) {
+            System.out.println("  (Chưa có dòng chi tiết)");
+        } else {
+            for (int i = 0; i < detailCount; i++) {
+                InvoiceDetail d = details[i];
+                System.out.printf("  [%s] %-28s | SL: %-4s | ĐG: %10s | TT: %10s%n",
+                    d.getLineType(), d.getDescription(), formatMoney(d.getQuantity()),
+                    formatMoney(d.getUnitPrice()), formatMoney(d.getAmount()));
+            }
+        }
+
+        if (extraChargeCount > 0) {
+            System.out.println("\n--- Phụ thu ---");
+            for (int i = 0; i < extraChargeCount; i++) {
+                ExtraCharge ec = extraCharges[i];
+                System.out.printf("  [%s] %-35s : +%s VND%n",
+                    ec.getChargeId(), ec.getReason(), formatMoney(ec.getAdjustmentAmount()));
+            }
+        }
+
+        if (discountCount > 0) {
+            double base = calculateDetailsTotal() + calculateExtraChargeTotal();
+            System.out.println("\n--- Giảm giá ---");
+            for (int i = 0; i < discountCount; i++) {
+                Discount dc = discounts[i];
+                System.out.printf("  [%s] %-35s : %s VND%n",
+                    dc.getDiscountId(), dc.getReason(), formatMoney(dc.getAdjustmentAmount(base)));
+            }
+        }
+
+        if (paymentCount > 0) {
+            System.out.println("\n--- Lịch sử thanh toán ---");
+            for (int i = 0; i < paymentCount; i++) {
+                Payment pm = payments[i];
+                System.out.printf("  [%s] %s | %-8s | %s VND (NV: %s)%n",
+                    pm.getPaymentId(), pm.getPaidAt().format(FILE_DT_FORMAT),
+                    pm.getMethod(), formatMoney(pm.getAmount()), pm.getReceivedBy());
+            }
+        }
+
+        if (refundCount > 0) {
+            System.out.println("\n--- Lịch sử hoàn tiền ---");
+            for (int i = 0; i < refundCount; i++) {
+                RefundRecord rf = refunds[i];
+                System.out.printf("  [%s] %s | %s VND | Lý do: %s (Duyệt: %s)%n",
+                    rf.getRefundId(), rf.getRefundedAt().format(FILE_DT_FORMAT),
+                    formatMoney(rf.getAmount()), rf.getReason(), rf.getApprovedBy());
+            }
+        }
+
+        System.out.println("------------------------------------------------------------");
+        System.out.println("Tổng hóa đơn        : " + formatMoney(calculateTotal()) + " VND");
+        System.out.println("Tiền cọc đã trừ     : " + formatMoney(depositApplied) + " VND");
+        System.out.println("Khách đã thanh toán : " + formatMoney(calculatePaid()) + " VND");
+        if (refundCount > 0) {
+            System.out.println("Đã hoàn tiền        : " + formatMoney(calculateRefunded()) + " VND");
+        }
+        System.out.println("=> CÒN PHẢI THU     : " + formatMoney(calculateRemaining()) + " VND");
+        System.out.println("============================================================\n");
+    }
+
+    public InvoiceDetail[] getDetails() { return details; }
+    public int getDetailCount() { return detailCount; }
+    public ExtraCharge[] getExtraCharges() { return extraCharges; }
+    public int getExtraChargeCount() { return extraChargeCount; }
+    public Discount[] getDiscounts() { return discounts; }
+    public int getDiscountCount() { return discountCount; }
+    public Payment[] getPayments() { return payments; }
+    public int getPaymentCount() { return paymentCount; }
+    public RefundRecord[] getRefunds() { return refunds; }
+    public int getRefundCount() { return refundCount; }
 }

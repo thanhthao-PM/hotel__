@@ -1,106 +1,229 @@
 package hotel.service;
 
+import hotel.model.CheckOutReceipt;
+import hotel.model.Discount;
+import hotel.model.ExtraCharge;
 import hotel.model.Invoice;
+import hotel.model.InvoiceDetail;
+import hotel.model.Payment;
 import hotel.model.RefundRecord;
+import hotel.model.ServiceUsage;
+import hotel.model.StayLinks;
+import hotel.model.StayRecord;
+import hotel.storage.IFileHandler;
 import hotel.util.CheckingExpression;
-import hotel.util.FileUtil; // IMPORT THÊM FILE CÔNG CỤ CỦA NHÓM TRƯỞNG
+import hotel.util.FileUtil;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
-public class InvoiceManager {
-    // Mảng này là cuốn sổ tay chứa TẤT CẢ hóa đơn của khách sạn.
-    private Invoice[] invoices; 
-    private int count; // Biến đếm xem khách sạn đang có bao nhiêu hóa đơn rồi
-    
-    // Đường dẫn file để lưu vào ổ cứng (chứ tắt chương trình là mất hết)
-    private static final String FILE_PATH = "data/invoices.txt"; //[cite: 7]
+public class InvoiceManager implements IFileHandler, StayLinks.InvoiceGateway {
 
-    // Hàm tạo (Constructor) khởi tạo cuốn sổ với số trang (capacity) do mình định trước
+    // Thư mục chứa 6 file txt của nhóm (nếu sau này đổi sang "data" chỉ cần sửa dòng này)
+    public static final String DATA_DIR = "src/main/java/hotel/file";
+    private static final double LATE_CHECKOUT_FEE_PER_HOUR = 50000;
+
+    private Invoice[] invoices;
+    private int count;
+
     public InvoiceManager(int capacity) {
-        // sức chứa phải > 0, nếu không new Invoice[0] rồi nhân đôi vẫn ra 0 và addInvoice bị lỗi
         CheckingExpression.checkPositiveInt(capacity, "Sức chứa danh sách hóa đơn phải > 0");
         this.invoices = new Invoice[capacity];
-        this.count = 0; // Lúc mới mở hệ thống thì chưa có hóa đơn nào
+        this.count = 0;
     }
 
-    // Hàm Thêm hóa đơn mới vào sổ
     public void addInvoice(Invoice invoice) {
-        // không cho thêm hóa đơn null (sau này findByInvoiceId sẽ bị NullPointerException)
-        if (invoice == null) {
-            throw new IllegalArgumentException("Hóa đơn không được null");
-        }
-        // không tạo hai Invoice cho cùng một StayRecord (kế hoạch mục 5.5)
+        if (invoice == null) throw new IllegalArgumentException("Hóa đơn không được null");
         for (int i = 0; i < count; i++) {
             if (invoices[i].getStayId().equals(invoice.getStayId())) {
                 throw new IllegalArgumentException("Lượt ở " + invoice.getStayId() + " đã có hóa đơn " + invoices[i].getInvoiceId());
             }
         }
-
-        // [THUẬT TOÁN]: Nếu sổ đầy (count >= sức chứa của mảng), ta phải mua sổ mới to gấp đôi và chép dữ liệu cũ sang.
         if (count >= invoices.length) {
-            Invoice[] newArray = new Invoice[invoices.length * 2]; // Tạo mảng mới bự gấp đôi
-            System.arraycopy(invoices, 0, newArray, 0, count); // Copy các tờ hóa đơn từ mảng cũ sang mảng mới
-            invoices = newArray; // Dùng mảng mới làm mảng chính
+            Invoice[] newArray = new Invoice[invoices.length * 2];
+            System.arraycopy(invoices, 0, newArray, 0, count);
+            invoices = newArray;
         }
-        
-        // Cất hóa đơn vào vị trí tiếp theo và tăng biến đếm lên 1.
-        invoices[count++] = invoice; 
+        invoices[count++] = invoice;
     }
 
-    // Hàm tìm kiếm hóa đơn theo Mã Hóa Đơn
     public Invoice findByInvoiceId(String id) {
-        // mã rỗng thì trả null luôn, giống các Manager khác
         if (id == null || id.trim().isEmpty()) return null;
-        // Lật từng trang sổ (vòng lặp) để tìm xem mã nào khớp với chữ mình nhập vào
+        String target = id.trim();
         for (int i = 0; i < count; i++) {
-            if (invoices[i].getInvoiceId().equals(id)) return invoices[i];
+            if (invoices[i].getInvoiceId().equalsIgnoreCase(target)) return invoices[i];
         }
-        return null; // Không tìm thấy
+        return null;
     }
 
-    // Xử lý logic Hoàn Cọc (Nếu cọc lớn hơn tổng hóa đơn)
+    public Invoice findByStayId(String stayId) {
+        if (stayId == null || stayId.trim().isEmpty()) return null;
+        String target = stayId.trim();
+        for (int i = 0; i < count; i++) {
+            if (invoices[i].getStayId().equalsIgnoreCase(target)) return invoices[i];
+        }
+        return null;
+    }
+
     public void processRefundIfNeeded(Invoice invoice, String managerId) {
-        // hóa đơn null sẽ gây NullPointerException; RefundRecord cũng bắt buộc có mã quản lý duyệt
-        if (invoice == null) {
-            throw new IllegalArgumentException("Hóa đơn không được null");
-        }
+        if (invoice == null) throw new IllegalArgumentException("Hóa đơn không được null");
         CheckingExpression.checkNotNullOrEmpty(managerId, "Hoàn tiền phải có mã quản lý duyệt");
-        
-        double remaining = invoice.calculateRemaining(); // Tính tiền nợ
-        if (remaining < 0) { // Nếu nợ là số âm -> tức là Khách đưa dư tiền cọc -> Khách sạn phải trả lại
-            double refundAmount = Math.abs(remaining); // Đổi số âm thành số dương bằng hàm Toán học Tuyệt đối (Math.abs)
-            
-            // Tạo 1 tờ giấy ghi chú hoàn tiền
+
+        double remaining = invoice.calculateRemaining();
+        if (remaining < 0) {
+            double refundAmount = Math.abs(remaining);
             RefundRecord refund = new RefundRecord(
-                "REF" + System.currentTimeMillis(), invoice.getInvoiceId(), refundAmount, "Hoàn tiền cọc dư", managerId);
-            
-            invoice.addRefund(refund); // Kẹp tờ giấy hoàn tiền đó vào kẹp hồ sơ của tờ hóa đơn
-            System.out.println("Đã ghi nhận hoàn cọc dư: " + refundAmount);
+                RefundRecord.generateId(), invoice.getInvoiceId(), refundAmount, "Hoàn tiền cọc dư", managerId);
+            invoice.addRefund(refund);
+            System.out.println("Đã ghi nhận hoàn cọc dư: " + Invoice.formatMoney(refundAmount) + " VND");
         }
     }
 
-    // [OOP - File I/O]: SỬ DỤNG CÔNG CỤ FileUtil CỦA NHÓM TRƯỞNG
+    // Cổng kết nối cho P4 (StayManager) gọi khi khách trả phòng
+    @Override
+    public String createInvoiceForStay(StayRecord stay, CheckOutReceipt receipt, String employeeId) {
+        if (stay == null) throw new IllegalArgumentException("StayRecord không được null");
+        Invoice existing = findByStayId(stay.getStayId());
+        if (existing != null) return existing.getInvoiceId();
+
+        Invoice inv = new Invoice(stay.getStayId(), employeeId, 0);
+
+        // Chuyển các lượt dùng dịch vụ của P4 sang dòng chi tiết hóa đơn
+        ServiceUsage[] usages = stay.getUsages();
+        if (usages != null) {
+            for (ServiceUsage u : usages) {
+                if (u == null) continue;
+                InvoiceDetail detail = new InvoiceDetail(
+                    InvoiceDetail.generateId(),
+                    inv.getInvoiceId(),
+                    Invoice.LineType.SERVICE,
+                    "Dịch vụ " + u.getServiceId(),
+                    "",
+                    u.getServiceId(),
+                    u.getUsageId(),
+                    u.getQuantity(),
+                    u.getUnitPriceAtUse()
+                );
+                inv.addDetail(detail);
+            }
+        }
+
+        // Nếu trả phòng muộn -> tự động thêm phụ thu
+        if (receipt != null && receipt.getLateHours() > 0) {
+            double fee = receipt.getLateHours() * LATE_CHECKOUT_FEE_PER_HOUR;
+            ExtraCharge lateCharge = new ExtraCharge(
+                ExtraCharge.generateId(),
+                inv.getInvoiceId(),
+                "Trả phòng muộn " + receipt.getLateHours() + " giờ",
+                fee,
+                employeeId
+            );
+            inv.addExtraCharge(lateCharge);
+        }
+
+        addInvoice(inv);
+        return inv.getInvoiceId();
+    }
+
+    @Override
+    public boolean hasInvoice(String stayId) {
+        return findByStayId(stayId) != null;
+    }
+
+    // ĐỌC ĐỒNG LOẠT TỪ 6 FILE TXT (tự bỏ qua dòng ghi chú bắt đầu bằng #)
+    @Override
+    public void readFile() {
+        this.count = 0;
+        try {
+            for (String line : readDataLines(DATA_DIR + "/invoices.txt")) {
+                addInvoice(Invoice.fromFileString(line));
+            }
+            for (String line : readDataLines(DATA_DIR + "/invoice_details.txt")) {
+                InvoiceDetail d = InvoiceDetail.fromFileString(line);
+                Invoice inv = findByInvoiceId(d.getInvoiceId());
+                if (inv != null) inv.addDetailFromFile(d);
+            }
+            for (String line : readDataLines(DATA_DIR + "/extra_charges.txt")) {
+                ExtraCharge ec = ExtraCharge.fromFileString(line);
+                Invoice inv = findByInvoiceId(ec.getInvoiceId());
+                if (inv != null) inv.addExtraChargeFromFile(ec);
+            }
+            for (String line : readDataLines(DATA_DIR + "/discounts.txt")) {
+                Discount dc = Discount.fromFileString(line);
+                Invoice inv = findByInvoiceId(dc.getInvoiceId());
+                if (inv != null) inv.addDiscountFromFile(dc);
+            }
+            for (String line : readDataLines(DATA_DIR + "/payments.txt")) {
+                Payment pm = Payment.fromFileString(line);
+                Invoice inv = findByInvoiceId(pm.getInvoiceId());
+                if (inv != null) inv.addPaymentFromFile(pm);
+            }
+            for (String line : readDataLines(DATA_DIR + "/refunds.txt")) {
+                RefundRecord rf = RefundRecord.fromFileString(line);
+                Invoice inv = findByInvoiceId(rf.getInvoiceId());
+                if (inv != null) inv.addRefundFromFile(rf);
+            }
+        } catch (IOException | RuntimeException e) {
+            System.out.println("Lỗi đọc file hóa đơn (P5): " + e.getMessage());
+        }
+    }
+
+    private ArrayList<String> readDataLines(String path) throws IOException {
+        ArrayList<String> valid = new ArrayList<>();
+        for (String line : FileUtil.readLines(path)) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                valid.add(trimmed);
+            }
+        }
+        return valid;
+    }
+
+    // GHI ĐỒNG LOẠT RA 6 FILE TXT QUA FileUtil
+    @Override
     public void writeFile() {
-        // Tạo một mảng String để chứa từng dòng text sẽ in ra file
-        String[] lines = new String[count];
+        int dCount = 0, ecCount = 0, dcCount = 0, pCount = 0, rCount = 0;
         for (int i = 0; i < count; i++) {
             Invoice inv = invoices[i];
-            // Hàm join sẽ tự động nối các dữ liệu lại với nhau bằng dấu "|" chuẩn của nhóm
-            lines[i] = FileUtil.join(inv.getInvoiceId(), inv.getStayId(), inv.getStatus(), inv.getDepositApplied());
+            dCount += inv.getDetailCount();
+            ecCount += inv.getExtraChargeCount();
+            dcCount += inv.getDiscountCount();
+            pCount += inv.getPaymentCount();
+            rCount += inv.getRefundCount();
         }
-        
+
+        String[] invLines = new String[count];
+        String[] dLines = new String[dCount];
+        String[] ecLines = new String[ecCount];
+        String[] dcLines = new String[dcCount];
+        String[] pLines = new String[pCount];
+        String[] rLines = new String[rCount];
+
+        int dIdx = 0, ecIdx = 0, dcIdx = 0, pIdx = 0, rIdx = 0;
+
+        for (int i = 0; i < count; i++) {
+            Invoice inv = invoices[i];
+            invLines[i] = inv.toFileString();
+
+            for (int j = 0; j < inv.getDetailCount(); j++) dLines[dIdx++] = inv.getDetails()[j].toFileString();
+            for (int j = 0; j < inv.getExtraChargeCount(); j++) ecLines[ecIdx++] = inv.getExtraCharges()[j].toFileString();
+            for (int j = 0; j < inv.getDiscountCount(); j++) dcLines[dcIdx++] = inv.getDiscounts()[j].toFileString();
+            for (int j = 0; j < inv.getPaymentCount(); j++) pLines[pIdx++] = inv.getPayments()[j].toFileString();
+            for (int j = 0; j < inv.getRefundCount(); j++) rLines[rIdx++] = inv.getRefunds()[j].toFileString();
+        }
+
         try {
-            // Hàm writeAllLines sẽ tự sinh ra file backup (.bak) rồi mới ghi đè file mới
-            FileUtil.writeAllLines(FILE_PATH, lines, count);
+            FileUtil.writeAllLines(DATA_DIR + "/invoices.txt", invLines, count);
+            FileUtil.writeAllLines(DATA_DIR + "/invoice_details.txt", dLines, dCount);
+            FileUtil.writeAllLines(DATA_DIR + "/extra_charges.txt", ecLines, ecCount);
+            FileUtil.writeAllLines(DATA_DIR + "/discounts.txt", dcLines, dcCount);
+            FileUtil.writeAllLines(DATA_DIR + "/payments.txt", pLines, pCount);
+            FileUtil.writeAllLines(DATA_DIR + "/refunds.txt", rLines, rCount);
         } catch (IOException e) {
-            System.out.println("Lỗi ghi file hóa đơn: " + e.getMessage());
+            System.out.println("Lỗi ghi file hóa đơn (P5): " + e.getMessage());
         }
     }
-    
-    // Getter lấy toàn bộ cuốn sổ ra ngoài để làm Thống kê
-    public Invoice[] getAllInvoices() {
-        return invoices;
-    }
-    
+
+    public Invoice[] getAllInvoices() { return invoices; }
     public int getCount() { return count; }
 }
