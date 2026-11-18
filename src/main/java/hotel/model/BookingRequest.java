@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class BookingRequest {
     private String requestId;
     private String customerId;
+    private String bookingId;
     private String bookingType;             // "INDIVIDUAL" hoặc "GROUP"
     private String groupName;
     private LocalDate expectedCheckInDate;
@@ -120,6 +121,7 @@ public class BookingRequest {
 
     public String getRequestId() { return requestId; }
     public String getCustomerId() { return customerId; }
+    public String getBookingId() { return bookingId; }
     public String getBookingType() { return bookingType; }
     public String getGroupName() { return groupName; }
     public LocalDate getExpectedCheckInDate() { return expectedCheckInDate; }
@@ -135,6 +137,7 @@ public class BookingRequest {
 
     public void setRequestId(String requestId) { this.requestId = requestId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
     public void setBookingType(String bookingType) { this.bookingType = bookingType; }
     public void setGroupName(String groupName) { this.groupName = groupName; }
     public void setExpectedCheckInDate(LocalDate expectedCheckInDate) { this.expectedCheckInDate = expectedCheckInDate; }
@@ -142,6 +145,7 @@ public class BookingRequest {
     public void setDepositDueAt(LocalDateTime depositDueAt) { this.depositDueAt = depositDueAt; }
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
     public void setRequestStatus(RequestStatus requestStatus) { this.requestStatus = requestStatus; }
+    public void setCancellationPending(boolean cancellationPending) { this.cancellationPending = cancellationPending; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setDetails(BookingDetail[] details) { this.details = details; }

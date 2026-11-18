@@ -1,16 +1,3 @@
-# ============================================================
-# FILE: payments.txt  -  THANH TOÁN HÓA ĐƠN (class Payment)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: PM001, PM002...
-# Ngày giờ: yyyy-MM-ddTHH:mm | Tiền: số nguyên VNĐ
-#
-# Cột: paymentId|invoiceId|amount|method|paidAt|receivedBy|referenceNo
-#   invoiceId: mã IV... trong invoices.txt (một hóa đơn có thể trả nhiều lần)
-#   method: CASH, CARD, TRANSFER
-#   receivedBy: mã EM... | referenceNo: số giao dịch (có thể rỗng)
-# ============================================================
-
 PM001|IV001|700000|CASH|2026-11-07T14:10|EM004|
 PM002|IV001|490000|TRANSFER|2026-11-07T14:15|EM004|FT26110701
 PM003|IV002|1122000|TRANSFER|2026-11-10T11:50|EM005|FT26111001

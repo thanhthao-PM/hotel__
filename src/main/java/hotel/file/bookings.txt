@@ -17,7 +17,6 @@
 # status: CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED, NO_SHOW
 # Các phòng của phiếu nằm trong booking_details.txt
 # ============================================================
-
 IND|BK001|CU001|2026-11-10|2026-11-13|CHECKED_IN|2026-11-10T14:05|EM003|Khách đến đúng hẹn|2
 IND|BK002|CU002|2026-11-05|2026-11-07|COMPLETED|2026-11-05T13:40|EM004||1
 GRP|BK003|CU003|2026-11-08|2026-11-10|COMPLETED|2026-11-08T12:50|EM003|Đoàn gia đình|Gia đình Lê|GM001;GM002;GM003

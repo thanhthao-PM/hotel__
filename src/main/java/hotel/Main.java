@@ -44,6 +44,8 @@ public class Main {
         ServiceManager serviceManager = new ServiceManager();
         InvoiceManager invoiceManager = new InvoiceManager(100);
         ReportService reportService = new ReportService(invoiceManager);
+        BookingManager bookingManager = new BookingManager();
+        
 
         // 2. Nạp file
         employeeManager.readFile();
@@ -52,7 +54,9 @@ public class Main {
         roomManager.readFile();
         serviceManager.readFile();
         invoiceManager.readFile();
-        boolean freshInstall = isFreshInstall(Paths.get("data"));
+        bookingManager.readFile();
+        String dataDirectory = BookingManager.resolveDataDirectory();
+        boolean freshInstall = isFreshInstall(Paths.get(dataDirectory));
 
         // 3. Lần chạy đầu: tạo Admin mặc định (đã có Admin thì không làm gì)
         accountManager.ensureDefaultAdmin();
@@ -74,9 +78,9 @@ public class Main {
                 new StayLinks.PersonAdapter(customerManager),
                 bookingAdapter,
                 new StayLinks.InvoiceAdapter(invoiceManager, bookingAdapter),
-                "data");
+                dataDirectory);
         menu.setStayManager(stayManager);   // thiếu dòng này thì menu vẫn báo "Đang phát triển"
-// stayManager.readFile();          // CHƯA bật: BookingManager chưa đọc/ghi file (xem lưu ý bên dưới)
+        stayManager.readFile();
 
 // 5. Chạy menu; finally đảm bảo luôn ghi file dù thoát kiểu gì
         try {
@@ -88,20 +92,8 @@ public class Main {
             roomManager.writeFile();
             serviceManager.writeFile();
             invoiceManager.writeFile();
-            roomManager.writeFile();
-            serviceManager.writeFile();
-            // stayManager.writeFile();     // bật cùng lúc với readFile()
-        }
-        try {
-            new ConsoleMenu(accountManager, employeeManager, customerManager, roomManager,
-                    bookingManager, serviceManager, invoiceManager, reportService).run();
-        } finally {
-            employeeManager.writeFile();
-            accountManager.writeFile();
-            customerManager.writeFile();
-            invoiceManager.writeFile();
-            roomManager.writeFile();
-            serviceManager.writeFile();
+            bookingManager.writeFile();
+            stayManager.writeFile();
         }
     }
 

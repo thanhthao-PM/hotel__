@@ -72,10 +72,4 @@ public class RefundRecord {
             p[3].trim(), LocalDateTime.parse(p[4].trim()), p[5].trim()
         );
     }
-
-    public String getRefundId() { return refundId; }
-    public String getInvoiceId() { return invoiceId; }
-    public String getReason() { return reason; }
-    public LocalDateTime getRefundedAt() { return refundedAt; }
-    public String getApprovedBy() { return approvedBy; }
 }

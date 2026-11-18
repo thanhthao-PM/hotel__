@@ -63,9 +63,4 @@ public class ExtraCharge implements Invoice.InvoiceAdjustment {
         return new ExtraCharge(p[0].trim(), p[1].trim(), p[2].trim(), Double.parseDouble(p[3].trim()), p[4].trim());
     }
 
-    public String getChargeId() { return chargeId; }
-    public String getInvoiceId() { return invoiceId; }
-    public String getReason() { return reason; }
-    public double getAmount() { return amount; }
-    public String getCreatedBy() { return createdBy; }
 }
