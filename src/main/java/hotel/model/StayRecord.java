@@ -186,7 +186,7 @@ public class StayRecord {
         guests[guestCount++] = g;
     }
 
-    void loadUsage(ServiceUsage u) {
+    public void loadUsage(ServiceUsage u) {
         if (usageCount == usages.length) usages = Arrays.copyOf(usages, usages.length * 2);
         usages[usageCount++] = u;
     }
@@ -197,7 +197,7 @@ public class StayRecord {
     }
 
     /** Thay toàn bộ danh sách khách (dùng khi sửa lượt ở đang ACTIVE). */
-    void replaceGuests(StayGuest[] newGuests) {
+    public void replaceGuests(StayGuest[] newGuests) {
         guests = new StayGuest[Math.max(INITIAL_CAPACITY, newGuests.length)];
         guestCount = 0;
         for (StayGuest g : newGuests) loadGuest(g);

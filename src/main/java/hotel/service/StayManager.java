@@ -1,8 +1,8 @@
-package hotel.model;
+package hotel.service;
 
+import hotel.model.*;
 import hotel.model.enums.Role;
 import hotel.model.enums.StayStatus;
-import hotel.service.IManager;
 import hotel.storage.IFileHandler;
 import hotel.util.FileUtil;
 import java.io.IOException;

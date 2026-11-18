@@ -69,4 +69,10 @@ public class BookingDetail {
     public LocalDate getCheckInDate() { return checkInDate; }
     public LocalDate getCheckOutDate() { return checkOutDate; }
     public String getNotes() { return notes; }
+
+    /** Gia hạn: đổi ngày trả (P3 đã kiểm tra phòng không bị đặt kế tiếp). */
+    public void setCheckOutDate(LocalDate checkOutDate) {
+        CheckingExpression.checkValidDateRange(checkInDate, checkOutDate);
+        this.checkOutDate = checkOutDate;
+    }
 }

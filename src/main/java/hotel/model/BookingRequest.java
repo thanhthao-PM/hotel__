@@ -89,6 +89,10 @@ public class BookingRequest {
         this.requestStatus = RequestStatus.EXPIRED;
     }
 
+    public void markConverted() {
+        this.requestStatus = RequestStatus.CONVERTED;
+    }
+
     public boolean isActive() {
         return this.requestStatus == RequestStatus.PENDING_DEPOSIT || 
                this.requestStatus == RequestStatus.CONFIRMED;
