@@ -29,6 +29,8 @@ import hotel.service.RoomManager;
 import hotel.service.ServiceManager;
 import hotel.service.InvoiceManager;
 import hotel.service.ReportService;
+import hotel.service.RoomManager;
+import hotel.service.ServiceManager;
 import hotel.util.CheckingExpression;
 
 import java.time.LocalDate;
@@ -71,18 +73,15 @@ public class ConsoleMenu {
     private final AccountManager accountManager;
     private final EmployeeManager employeeManager;
     private final CustomerManager customerManager;
-
-    private final InvoiceManager invoiceManager;
-    private final ReportService reportService;
-
-    // P4 thêm --
-    private StayManager stayManager;
-    // P4 hết ---
-
     private final RoomManager roomManager;
     private final BookingManager bookingManager;
     private final ServiceManager serviceManager;
+    private final InvoiceManager invoiceManager;
+    private final ReportService reportService;
 
+    // P4: Quản lý lưu trú
+    private StayManager stayManager;
+  
     private Account currentUser;
     private int depth = 0;
 
@@ -174,7 +173,7 @@ public class ConsoleMenu {
         employeeManager.writeFile();
         accountManager.writeFile();
         customerManager.writeFile();
-
+        invoiceManager.writeFile();
         // P4 thêm --
         if (stayManager != null) stayManager.writeFile();
         // P4 hết --
@@ -330,9 +329,9 @@ public class ConsoleMenu {
             if (choice == 0) return;
             switch (choice) {
                 case 1: openSub(this::showRequestMenu);                    break;
-                case 2: notReady("Duyệt giảm giá (P5)");      break;
-                case 3: notReady("Hủy hóa đơn (P5)");         break; 
-                case 4: notReady("Hoàn tiền (P5)");           break;  
+                case 2: applyDiscount();                                   break;
+                case 3: cancelInvoice();                                   break;
+                case 4: refundMoney();                                     break;  
                 default: System.out.println("Lựa chọn không hợp lệ.");
             }
         }
@@ -2061,9 +2060,9 @@ public class ConsoleMenu {
 
             try {
                 switch (choice) {
-                    case 1: showRevenueReport(); break;
-                    case 2: notReady("Công suất phòng"); break;   
-                    case 3: notReady("Dịch vụ bán chạy"); break;   
+                    case 1: showRevenueReport();       break;
+                    case 2: showRoomOccupancyReport(); break;
+                    case 3: showTopServicesReport();   break;  
                     default: System.out.println("Lựa chọn không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -2322,8 +2321,14 @@ public class ConsoleMenu {
     // MODULE P5 - INVOICE & PAYMENT (TRÂM)
     // ============================================================
 
+    private String getCurrentStaffId() {
+        if (currentUser == null) return "EM001";
+        String empId = currentUser.getEmployeeId();
+        return (empId != null && !empId.trim().isEmpty()) ? empId : currentUser.getUsername();
+    }
+
     private void displayInvoices() {
-        System.out.println("--- DANH SÁCH HÓA ĐƠN ---");
+        printTitle("DANH SÁCH HÓA ĐƠN");
         hotel.model.Invoice[] list = invoiceManager.getAllInvoices();
         int count = invoiceManager.getCount();
         if (count == 0) {
@@ -2332,142 +2337,227 @@ public class ConsoleMenu {
         }
         for (int i = 0; i < count; i++) {
             hotel.model.Invoice inv = list[i];
-            System.out.println("- " + inv.getInvoiceId() + " | Lưu trú: " + inv.getStayId() + " | Trạng thái: " + inv.getStatus() + " | Nợ: " + inv.calculateRemaining());
+            System.out.printf("- %s | Lưu trú: %s | Trạng thái: %-14s | Tổng: %10s | Còn nợ: %s VND%n",
+                inv.getInvoiceId(), inv.getStayId(), inv.getStatus(),
+                hotel.model.Invoice.formatMoney(inv.calculateTotal()),
+                hotel.model.Invoice.formatMoney(inv.calculateRemaining()));
         }
     }
 
     private void createInvoice() {
-        System.out.println("--- LẬP HÓA ĐƠN MỚI ---");
-        String stayId = readNonEmpty("Nhập mã lưu trú (Stay ID): ");
+        printTitle("LẬP HÓA ĐƠN MỚI");
+        String stayId = readNonEmpty("Nhập mã lưu trú (VD ST011): ").toUpperCase();
         double deposit = readNonNegativeDouble("Nhập tiền cọc đã áp dụng: ");
-        
+
         try {
-            String nv = (currentUser != null) ? currentUser.toString() : "NhanVien";
-            hotel.model.Invoice inv = new hotel.model.Invoice(stayId, nv, deposit);
+            hotel.model.Invoice inv = new hotel.model.Invoice(stayId, getCurrentStaffId(), deposit);
+
+            while (confirm("Thêm dòng chi tiết (tiền phòng / dịch vụ) vào hóa đơn?")) {
+                item("Loại dòng: 1. Tiền phòng (ROOM) | 2. Dịch vụ (SERVICE)");
+                int typeChoice = readChoice();
+                if (typeChoice == 1) {
+                    String roomId = readNonEmpty("Mã phòng (VD RO101): ").toUpperCase();
+                    String desc = readNonEmpty("Mô tả (VD Tiền phòng RO101 - 2 đêm): ");
+                    double qty = readNonNegativeDouble("Số đêm: ");
+                    double price = readNonNegativeDouble("Đơn giá/đêm: ");
+                    inv.addDetail(new hotel.model.InvoiceDetail(
+                        hotel.model.InvoiceDetail.generateId(), inv.getInvoiceId(),
+                        hotel.model.Invoice.LineType.ROOM, desc, roomId, "", "", qty, price));
+                } else if (typeChoice == 2) {
+                    String svcId = readNonEmpty("Mã dịch vụ (VD SV001): ").toUpperCase();
+                    String usageId = readNonEmpty("Mã lượt dùng (VD SU015): ").toUpperCase();
+                    String desc = readNonEmpty("Mô tả dịch vụ: ");
+                    double qty = readNonNegativeDouble("Số lượng: ");
+                    double price = readNonNegativeDouble("Đơn giá: ");
+                    inv.addDetail(new hotel.model.InvoiceDetail(
+                        hotel.model.InvoiceDetail.generateId(), inv.getInvoiceId(),
+                        hotel.model.Invoice.LineType.SERVICE, desc, "", svcId, usageId, qty, price));
+                } else {
+                    System.out.println("Lựa chọn không hợp lệ.");
+                }
+            }
+
             invoiceManager.addInvoice(inv);
             System.out.println("=> Lập hóa đơn thành công! Mã hóa đơn: " + inv.getInvoiceId());
-        } catch (Exception e) {
+            inv.printReceipt();
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void viewInvoice() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần xem: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần xem (VD IV001): ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
-        System.out.println("\n--- CHI TIẾT HÓA ĐƠN [" + invId + "] ---");
-        System.out.println("Trạng thái: " + inv.getStatus());
-        System.out.println("Mã lưu trú: " + inv.getStayId());
-        System.out.println("Tiền cọc: " + inv.getDepositApplied());
-        System.out.println("Tổng tiền: " + inv.calculateTotal());
-        System.out.println("Khách đã thanh toán: " + inv.calculatePaid());
-        System.out.println("-> KHÁCH CÒN NỢ: " + inv.calculateRemaining());
+        inv.printReceipt();
     }
 
     private void collectPayment() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần thu tiền: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần thu tiền: ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
-        System.out.println("Số tiền khách còn nợ: " + inv.calculateRemaining());
-        double amount = readNonNegativeDouble("Nhập số tiền khách đưa: ");
+        System.out.println("Số tiền khách còn nợ: " + hotel.model.Invoice.formatMoney(inv.calculateRemaining()) + " VND");
+        double amount = readNonNegativeDouble("Nhập số tiền khách thanh toán: ");
+
+        item("Phương thức: 1. Tiền mặt (CASH) | 2. Thẻ (CARD) | 3. Chuyển khoản (TRANSFER)");
+        int mChoice = readChoice();
+        hotel.model.Invoice.PaymentMethod method;
+        if (mChoice == 1) method = hotel.model.Invoice.PaymentMethod.CASH;
+        else if (mChoice == 2) method = hotel.model.Invoice.PaymentMethod.CARD;
+        else if (mChoice == 3) method = hotel.model.Invoice.PaymentMethod.TRANSFER;
+        else {
+            System.out.println("Phương thức không hợp lệ.");
+            return;
+        }
+
+        String refNo = "";
+        if (method != hotel.model.Invoice.PaymentMethod.CASH) {
+            System.out.print("Mã giao dịch (Enter nếu không có): ");
+            refNo = sc.nextLine().trim();
+        }
 
         try {
-            String nv = (currentUser != null) ? currentUser.toString() : "NhanVien";
-            hotel.model.Payment payment = new hotel.model.Payment("PAY" + System.currentTimeMillis(), invId, amount, hotel.model.Invoice.PaymentMethod.CASH, nv, "");
+            hotel.model.Payment payment = new hotel.model.Payment(
+                hotel.model.Payment.generateId(), inv.getInvoiceId(), amount, method, getCurrentStaffId(), refNo);
             inv.addPayment(payment);
-            System.out.println("=> Thu tiền thành công! Trạng thái hóa đơn: " + inv.getStatus());
-        } catch (Exception e) {
+            System.out.println("=> Thu tiền thành công! Trạng thái: " + inv.getStatus()
+                + " | Còn nợ: " + hotel.model.Invoice.formatMoney(inv.calculateRemaining()) + " VND");
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void addExtraCharge() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần phụ thu: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần phụ thu: ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
-        
         String reason = readNonEmpty("Lý do phụ thu: ");
         double amount = readNonNegativeDouble("Số tiền phụ thu: ");
 
         try {
-            String nv = (currentUser != null) ? currentUser.toString() : "NhanVien";
-            hotel.model.ExtraCharge charge = new hotel.model.ExtraCharge("EC" + System.currentTimeMillis(), invId, reason, amount, nv);
+            hotel.model.ExtraCharge charge = new hotel.model.ExtraCharge(
+                hotel.model.ExtraCharge.generateId(), inv.getInvoiceId(), reason, amount, getCurrentStaffId());
             inv.addExtraCharge(charge);
-            System.out.println("=> Ghi phụ thu thành công!");
-        } catch (Exception e) {
+            System.out.println("=> Ghi phụ thu thành công! Tổng mới: " + hotel.model.Invoice.formatMoney(inv.calculateTotal()) + " VND");
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void applyDiscount() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần giảm giá: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần giảm giá: ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
-        
+        item("Loại giảm giá: 1. Theo phần trăm (%) | 2. Số tiền cố định (VNĐ)");
+        int dChoice = readChoice();
+        hotel.model.Invoice.DiscountType type;
+        if (dChoice == 1) type = hotel.model.Invoice.DiscountType.PERCENT;
+        else if (dChoice == 2) type = hotel.model.Invoice.DiscountType.FIXED;
+        else {
+            System.out.println("Lựa chọn không hợp lệ.");
+            return;
+        }
+
+        double value = readNonNegativeDouble(type == hotel.model.Invoice.DiscountType.PERCENT
+            ? "Nhập % giảm (0 - 100): " : "Nhập số tiền giảm (VNĐ): ");
         String reason = readNonEmpty("Lý do giảm giá: ");
-        double value = readNonNegativeDouble("Số tiền giảm: ");
 
         try {
-            String nv = (currentUser != null) ? currentUser.toString() : "QuanLy";
-            hotel.model.Discount discount = new hotel.model.Discount("DC" + System.currentTimeMillis(), invId, hotel.model.Invoice.DiscountType.FIXED, value, reason, nv);
+            hotel.model.Discount discount = new hotel.model.Discount(
+                hotel.model.Discount.generateId(), inv.getInvoiceId(), type, value, reason, getCurrentStaffId());
             inv.addDiscount(discount);
-            System.out.println("=> Áp dụng giảm giá thành công!");
-        } catch (Exception e) {
+            System.out.println("=> Áp dụng giảm giá thành công! Tổng mới: " + hotel.model.Invoice.formatMoney(inv.calculateTotal()) + " VND");
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void cancelInvoice() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần hủy: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần hủy: ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
+        if (!confirm("Xác nhận hủy hóa đơn " + inv.getInvoiceId() + "?")) return;
         String reason = readNonEmpty("Nhập lý do hủy hóa đơn: ");
-        
+
         try {
             inv.cancel(reason);
             System.out.println("=> Hủy hóa đơn thành công! Trạng thái hiện tại: " + inv.getStatus());
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void refundMoney() {
-        String invId = readNonEmpty("Nhập mã hóa đơn cần hoàn tiền: ");
+        String invId = readNonEmpty("Nhập mã hóa đơn cần hoàn tiền: ").toUpperCase();
         hotel.model.Invoice inv = invoiceManager.findByInvoiceId(invId);
         if (inv == null) {
             System.out.println("=> Không tìm thấy hóa đơn!");
             return;
         }
+        double remaining = inv.calculateRemaining();
+        System.out.println("Số dư hiện tại của hóa đơn: " + hotel.model.Invoice.formatMoney(remaining) + " VND");
+
+        if (remaining < 0 && confirm("Khách đang cọc/trả dư " + hotel.model.Invoice.formatMoney(Math.abs(remaining)) + " VND. Hoàn tự động số tiền dư này?")) {
+            try {
+                invoiceManager.processRefundIfNeeded(inv, getCurrentStaffId());
+            } catch (RuntimeException e) {
+                System.out.println("=> Lỗi: " + e.getMessage());
+            }
+            return;
+        }
+
         double amount = readNonNegativeDouble("Nhập số tiền hoàn: ");
         String reason = readNonEmpty("Nhập lý do hoàn tiền: ");
 
         try {
-            String nv = (currentUser != null) ? currentUser.toString() : "QuanLy";
-            hotel.model.RefundRecord refund = new hotel.model.RefundRecord("REF" + System.currentTimeMillis(), invId, amount, reason, nv);
+            hotel.model.RefundRecord refund = new hotel.model.RefundRecord(
+                hotel.model.RefundRecord.generateId(), inv.getInvoiceId(), amount, reason, getCurrentStaffId());
             inv.addRefund(refund);
             System.out.println("=> Đã ghi nhận hoàn tiền thành công!");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.out.println("=> Lỗi: " + e.getMessage());
         }
     }
 
     private void showRevenueReport() {
-        System.out.println("--- BÁO CÁO DOANH THU ---");
-        System.out.println("=> Tổng doanh thu thực tế thu được: " + reportService.calculateTotalRevenue() + " VND");
+        printTitle("BÁO CÁO DOANH THU");
+        System.out.println("Tổng doanh thu toàn thời gian: "
+            + hotel.model.Invoice.formatMoney(reportService.calculateTotalRevenue()) + " VND");
+        if (confirm("Xem doanh thu theo khoảng ngày?")) {
+            LocalDate from = readDate("Từ ngày (dd/MM/yyyy): ");
+            LocalDate to = readDate("Đến ngày (dd/MM/yyyy): ");
+            double rev = reportService.calculateRevenueByPeriod(from, to);
+            System.out.println("=> Doanh thu từ " + from.format(DATE_FORMAT) + " đến " + to.format(DATE_FORMAT)
+                + ": " + hotel.model.Invoice.formatMoney(rev) + " VND");
+        }
+    }
+
+    private void showRoomOccupancyReport() {
+        printTitle("BÁO CÁO CÔNG SUẤT PHÒNG");
+        int totalRooms = (int) readNonNegativeDouble("Nhập tổng số phòng khách sạn hiện có: ");
+        LocalDate from = readDate("Từ ngày (dd/MM/yyyy): ");
+        LocalDate to = readDate("Đến ngày (dd/MM/yyyy): ");
+        double rate = reportService.calculateAverageOccupancy(totalRooms, from, to);
+        System.out.printf("=> Công suất phòng trung bình: %.2f%%%n", rate);
+    }
+
+    private void showTopServicesReport() {
+        printTitle("DỊCH VỤ BÁN CHẠY");
+        reportService.printTopServicesReport();
     }
 }
