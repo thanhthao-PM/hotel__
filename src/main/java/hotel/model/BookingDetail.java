@@ -7,7 +7,8 @@ public class BookingDetail {
     private String bookingDetailId; // Mã chi tiết
     private String requestId;       // Mã BookingRequest liên kết
     private String bookingId;       // Mã Booking liên kết (để rỗng/null khi mới chỉ là Request)
-    private String originalRoomId;  // Mã phòng ban đầu đặt
+    private String roomId;
+    private String previousRoomId;
     private int guestCount;         // Số lượng khách của phòng này
     private double bookingUnitPrice;// Giá phòng tại thời điểm đặt
     private double depositShare;    // Tiền cọc phân bổ riêng cho phòng này
@@ -18,19 +19,27 @@ public class BookingDetail {
     public BookingDetail(String bookingDetailId, String requestId, String originalRoomId, 
                          int guestCount, double bookingUnitPrice, double depositShare, 
                          LocalDate checkInDate, LocalDate checkOutDate, String notes) {
+        this(bookingDetailId, requestId, null, originalRoomId, null, guestCount,
+                bookingUnitPrice, depositShare, checkInDate, checkOutDate, notes);
+    }
 
+    public BookingDetail(String bookingDetailId, String requestId, String bookingId,
+                         String roomId, String previousRoomId, int guestCount,
+                         double bookingUnitPrice, double depositShare,
+                         LocalDate checkInDate, LocalDate checkOutDate, String notes) {
         CheckingExpression.checkNotNullOrEmpty(bookingDetailId, "Mã chi tiết đặt phòng không được để trống");
-        CheckingExpression.checkNotNullOrEmpty(originalRoomId, "Mã phòng không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(roomId, "Mã phòng không được để trống");
         CheckingExpression.checkPositiveInt(guestCount, "Số lượng khách phải > 0");
         CheckingExpression.checkPositiveDouble(bookingUnitPrice, "Giá phòng phải > 0");
         CheckingExpression.checkNonNegativeDouble(depositShare, "Tiền cọc của phòng không được âm");
         CheckingExpression.checkValidDateRange(checkInDate, checkOutDate);
 
-
         this.bookingDetailId = bookingDetailId;
         this.requestId = requestId;
-        this.bookingId = null; // Mặc định rỗng khi mới ở giai đoạn Request
-        this.originalRoomId = originalRoomId;
+        this.bookingId = bookingId;
+        this.roomId = roomId;
+        this.previousRoomId = previousRoomId == null || previousRoomId.isBlank()
+                ? null : previousRoomId;
         this.guestCount = guestCount;
         this.bookingUnitPrice = bookingUnitPrice;
         this.depositShare = depositShare;
@@ -54,7 +63,8 @@ public class BookingDetail {
     public void upgradeRoom(String newRoomId, double newPrice) {
         CheckingExpression.checkNotNullOrEmpty(newRoomId, "Mã phòng không được để trống");
         CheckingExpression.checkPositiveDouble(newPrice, "Giá phòng phải > 0");
-        this.originalRoomId = newRoomId;
+        if (previousRoomId == null) previousRoomId = roomId;
+        this.roomId = newRoomId;
         this.bookingUnitPrice = newPrice;
     }
 
@@ -64,7 +74,8 @@ public class BookingDetail {
         CheckingExpression.checkPositiveInt(guests, "Số lượng khách phải > 0");
         CheckingExpression.checkPositiveDouble(unitPrice, "Giá phòng phải > 0");
         CheckingExpression.checkValidDateRange(checkIn, checkOut);
-        this.originalRoomId = roomId;
+        this.roomId = roomId;
+        this.previousRoomId = null;
         this.guestCount = guests;
         this.bookingUnitPrice = unitPrice;
         this.checkInDate = checkIn;
@@ -76,7 +87,9 @@ public class BookingDetail {
     public String getRequestId() { return requestId; }
     public String getBookingId() { return bookingId; }
     public void setBookingId(String bookingId) { this.bookingId = bookingId; }
-    public String getOriginalRoomId() { return originalRoomId; }
+    public String getOriginalRoomId() { return roomId; }
+    public String getRoomId() { return roomId; }
+    public String getPreviousRoomId() { return previousRoomId; }
     public int getGuestCount() { return guestCount; }
     public double getBookingUnitPrice() { return bookingUnitPrice; }
     public double getDepositShare() { return depositShare; }

@@ -38,6 +38,29 @@ public class Deposit {
         this.status = DepositStatus.HELD;
     }
 
+    public Deposit(String depositId, String requestId, String bookingId, double amount,
+                   PaymentMethod method, LocalDateTime paidAt, String receivedBy,
+                   String referenceNo, DepositStatus status) {
+        CheckingExpression.checkNotNullOrEmpty(depositId, "Mã tiền cọc không được để trống");
+        CheckingExpression.checkAtLeastOneNotNull(requestId, bookingId,
+                "Tiền cọc phải gắn với yêu cầu hoặc đặt phòng");
+        CheckingExpression.checkPositiveDouble(amount, "Số tiền cọc phải > 0");
+        if (!Double.isFinite(amount)) throw new IllegalArgumentException("Số tiền cọc phải hữu hạn");
+        if (method == null || status == null || paidAt == null) {
+            throw new IllegalArgumentException("Thông tin thanh toán không được để trống");
+        }
+        CheckingExpression.checkNotNullOrEmpty(receivedBy, "Mã nhân viên thu cọc không được để trống");
+        this.depositId = depositId;
+        this.requestId = requestId;
+        this.bookingId = bookingId;
+        this.amount = amount;
+        this.method = method;
+        this.paidAt = paidAt;
+        this.receivedBy = receivedBy;
+        this.referenceNo = referenceNo;
+        this.status = status;
+    }
+
     public void markApplied(String bookingId) {
         // phải có mã Booking để gán
         CheckingExpression.checkNotNullOrEmpty(bookingId, "Mã đặt phòng không được để trống");

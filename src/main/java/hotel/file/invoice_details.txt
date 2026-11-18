@@ -1,18 +1,3 @@
-# ============================================================
-# FILE: invoice_details.txt  -  DÒNG CHI TIẾT HÓA ĐƠN (class InvoiceDetail)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: ID001, ID002...
-# Tiền: số nguyên VNĐ
-#
-# Cột: detailId|invoiceId|lineType|description|roomId|serviceId|usageId|quantity|unitPrice|amount
-#   invoiceId: mã IV... trong invoices.txt
-#   lineType: ROOM (dòng tiền phòng, có roomId) hoặc SERVICE (dòng dịch vụ, có serviceId và usageId)
-#   unitPrice của dòng ROOM lấy từ bookingUnitPrice (booking_details.txt)
-#   unitPrice của dòng SERVICE lấy từ unitPriceAtUse (service_usages.txt)
-#   amount = quantity x unitPrice
-# ============================================================
-
 ID001|IV001|ROOM|Tiền phòng RO101 (2 đêm)|RO101|||2|500000|1000000
 ID002|IV001|SERVICE|Bữa sáng buffet||SV001|SU001|2|150000|300000
 ID003|IV001|SERVICE|Cà phê sữa đá||SV004|SU002|2|45000|90000
