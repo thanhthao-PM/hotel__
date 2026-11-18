@@ -174,6 +174,7 @@ public class ConsoleMenu {
         accountManager.writeFile();
         customerManager.writeFile();
         invoiceManager.writeFile();
+        bookingManager.writeFile();
         // P4 thêm --
         if (stayManager != null) stayManager.writeFile();
         // P4 hết --

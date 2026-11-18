@@ -9,6 +9,7 @@ public class GroupBooking extends Booking {
     private Room[] roomObjs;
     private GuestMember[] members;
     private int memberCount;
+    private String[] memberIds = new String[0];
 
     public GroupBooking(String bookingId, String requestId, String customerId, 
                         LocalDate checkInDate, LocalDate expectedCheckOutDate, 
@@ -46,4 +47,8 @@ public class GroupBooking extends Booking {
     public void setMembers(GuestMember[] members) { this.members = members; }
     public int getMemberCount() { return memberCount; }
     public void setMemberCount(int memberCount) { this.memberCount = memberCount; }
+    public String[] getMemberIds() { return memberIds.clone(); }
+    public void setMemberIds(String[] memberIds) {
+        this.memberIds = memberIds == null ? new String[0] : memberIds.clone();
+    }
 }

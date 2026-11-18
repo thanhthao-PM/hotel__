@@ -1,0 +1,29 @@
+# ============================================================
+# FILE: bookings.txt  -  PHIẾU ĐẶT PHÒNG (class IndividualBooking và GroupBooking, cùng kế thừa Booking)
+# ============================================================
+# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
+# Mã = 2 chữ cái đầu + 3 số cuối: BK001, BK002... (IND và GRP dùng chung một bộ mã BK)
+# Ngày: yyyy-MM-dd | Ngày giờ: yyyy-MM-ddTHH:mm
+# Cột đầu tiên là LOẠI PHIẾU để biết new IndividualBooking hay GroupBooking.
+#
+# [IND] IndividualBooking (9 dòng)
+#   IND|bookingId|customerId|checkInDate|expectedCheckOutDate|status|createdAt|createdBy|note|numberOfGuests
+#
+# [GRP] GroupBooking (1 dòng)
+#   GRP|bookingId|customerId|checkInDate|expectedCheckOutDate|status|createdAt|createdBy|note|groupName|memberIds
+#   memberIds: mã GM... trong guest_members.txt, ngăn cách bằng ;
+#
+# customerId: mã CU... (người đặt, với đoàn là người đại diện) | createdBy: mã EM...
+# status: CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED, NO_SHOW
+# Các phòng của phiếu nằm trong booking_details.txt
+# ============================================================
+IND|BK001|CU001|2026-11-10|2026-11-13|CHECKED_IN|2026-11-10T14:05|EM003|Khách đến đúng hẹn|2
+IND|BK002|CU002|2026-11-05|2026-11-07|COMPLETED|2026-11-05T13:40|EM004||1
+GRP|BK003|CU003|2026-11-08|2026-11-10|COMPLETED|2026-11-08T12:50|EM003|Đoàn gia đình|Gia đình Lê|GM001;GM002;GM003
+IND|BK004|CU009|2026-11-11|2026-11-14|CHECKED_IN|2026-11-11T11:30|EM005|Đặt trực tiếp tại quầy|2
+IND|BK005|CU005|2026-11-11|2026-11-13|CHECKED_IN|2026-11-11T15:10|EM003|Nâng phòng từ RO103 lên RO301|2
+IND|BK006|CU006|2026-11-25|2026-11-27|CONFIRMED|2026-11-12T10:00|EM003|Đặt trực tiếp cho ngày sau|2
+IND|BK007|CU007|2026-11-02|2026-11-04|COMPLETED|2026-11-02T14:10|EM004|Khách nước ngoài|2
+IND|BK008|CU002|2026-10-20|2026-10-24|COMPLETED|2026-10-20T13:50|EM003|Trả phòng sớm sau 1 đêm|2
+IND|BK009|CU004|2026-10-26|2026-10-28|COMPLETED|2026-10-26T14:00|EM005|Đặt trực tiếp tại quầy|2
+IND|BK010|CU001|2026-10-28|2026-10-30|COMPLETED|2026-10-28T13:30|EM004|Đặt trực tiếp tại quầy|1
