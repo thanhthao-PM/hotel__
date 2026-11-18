@@ -19,6 +19,7 @@ public class Main {
         employeeManager.readFile();
         accountManager.readFile();
         customerManager.readFile();
+        invoiceManager.readFile();
  
         // 3. Lần chạy đầu: tạo Admin mặc định (đã có Admin thì không làm gì)
         accountManager.ensureDefaultAdmin();
