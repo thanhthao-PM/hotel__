@@ -54,7 +54,8 @@ public class ConsoleMenu {
     private final AccountManager accountManager;
     private final EmployeeManager employeeManager;
     private final CustomerManager customerManager;
-    
+    private final RoomManager roomManager;
+    private final ServiceManager serviceManager;
     private final InvoiceManager invoiceManager; // THÊM 2 DÒNG NÀY: để gọi nghiệp vụ và báo cáo
     private final ReportService reportService; // THÊM 2 DÒNG NÀY: để gọi nghiệp vụ và báo cáo
     // P4 thêm --
@@ -76,9 +77,6 @@ public class ConsoleMenu {
                        ServiceManager serviceManager,
                        InvoiceManager invoiceManager,
                        ReportService reportService) {
-        
-        private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
-        private int depth = 0;
         this.accountManager = accountManager;
         this.employeeManager = employeeManager;
         this.customerManager = customerManager;

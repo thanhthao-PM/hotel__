@@ -8,7 +8,6 @@ import hotel.model.InvoiceDetail;
 import hotel.model.Payment;
 import hotel.model.RefundRecord;
 import hotel.model.ServiceUsage;
-import hotel.model.StayLinks;
 import hotel.model.StayRecord;
 import hotel.storage.IFileHandler;
 import hotel.util.CheckingExpression;
