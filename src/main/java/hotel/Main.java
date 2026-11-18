@@ -30,6 +30,10 @@ import java.time.LocalDate;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import hotel.model.enums.PaymentMethod;
+import hotel.service.StayLinks;
+import hotel.service.StayManager;
+
 public class Main {
     public static void main(String[] args) throws IOException {
         // 1. Tạo mỗi Manager ĐÚNG MỘT object, cả chương trình dùng chung
@@ -59,6 +63,33 @@ public class Main {
         }
  
         // 4. Chạy menu; finally đảm bảo luôn ghi file dù thoát kiểu gì
+        // 4. Ghép P4 (StayManager) với các module khác qua StayLinks
+        ConsoleMenu menu = new ConsoleMenu(accountManager, employeeManager, customerManager, roomManager,
+                bookingManager, serviceManager, invoiceManager, reportService);
+
+        StayLinks.BookingAdapter bookingAdapter = new StayLinks.BookingAdapter(bookingManager);
+        StayManager stayManager = new StayManager(
+                new StayLinks.RoomAdapter(roomManager),
+                new StayLinks.ServiceAdapter(serviceManager),
+                new StayLinks.PersonAdapter(customerManager),
+                bookingAdapter,
+                new StayLinks.InvoiceAdapter(invoiceManager, bookingAdapter),
+                "data");
+        menu.setStayManager(stayManager);   // thiếu dòng này thì menu vẫn báo "Đang phát triển"
+// stayManager.readFile();          // CHƯA bật: BookingManager chưa đọc/ghi file (xem lưu ý bên dưới)
+
+// 5. Chạy menu; finally đảm bảo luôn ghi file dù thoát kiểu gì
+        try {
+            menu.run();
+        } finally {
+            employeeManager.writeFile();
+            accountManager.writeFile();
+            customerManager.writeFile();
+            invoiceManager.writeFile();
+            roomManager.writeFile();
+            serviceManager.writeFile();
+            // stayManager.writeFile();     // bật cùng lúc với readFile()
+        }
         try {
             new ConsoleMenu(accountManager, employeeManager, customerManager, roomManager,
                     bookingManager, serviceManager, invoiceManager, reportService).run();
@@ -172,6 +203,17 @@ public class Main {
         if (!bookings.createBookingRequest(group)) {
             throw new IllegalStateException("Không thể tạo yêu cầu đặt phòng mẫu REQ-DEMO-002.");
         }
+        // Phiếu mẫu cho P4: nhận phòng hôm nay, đã cọc (CONFIRMED) để thử luồng nhận phòng
+        LocalDate today = LocalDate.now();
+        BookingRequest stayDemo = new BookingRequest("REQ-DEMO-003", "KH900", "INDIVIDUAL",
+                null, today, today.plusDays(2), "NV900", 1);
+        stayDemo.addDetail(new BookingDetail("DT-DEMO-004", stayDemo.getRequestId(), "R904",
+                2, rooms.getRoomPrice("R904", 1), 0, today, today.plusDays(2), "Phiếu thử nhận phòng"));
+        if (!bookings.createBookingRequest(stayDemo)) {
+            throw new IllegalStateException("Không thể tạo yêu cầu đặt phòng mẫu REQ-DEMO-003.");
+        }
+        bookings.processDeposit(stayDemo.getRequestId(), stayDemo.calculateRequiredDeposit(),
+                PaymentMethod.CASH, "NV900", "DEMO");
 
         Person.syncNextNumber(902);
     }
