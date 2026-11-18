@@ -42,7 +42,7 @@ public class StandardRoom extends Room {
     // Ghi đè: một dòng file của phòng thường
     @Override
     public String toFileString() {
-        return FileUtil.join("STANDARD", baseFileString(), FileUtil.clean(bedType), bedCount);
+        return FileUtil.join("STD", baseFileString(), FileUtil.clean(bedType), bedCount);
     }
 
     public String getBedType() { return bedType; }

@@ -83,6 +83,23 @@ public class RoomMaintenance {
                 FileUtil.clean(reason), reportedBy, closed);
     }
 
+    // Đọc một dòng file tạo đối tượng RoomMaintenance
+    public static RoomMaintenance fromFileString(String line) {
+        String[] p = FileUtil.split(line);
+        if (p.length < 7) {
+            throw new IllegalArgumentException("Dòng dữ liệu bảo trì không đủ số trường: " + line);
+        }
+        return new RoomMaintenance(
+                p[0].trim(),
+                p[1].trim(),
+                LocalDate.parse(p[2].trim()),
+                LocalDate.parse(p[3].trim()),
+                p[4].trim(),
+                p[5].trim(),
+                Boolean.parseBoolean(p[6].trim())
+        );
+    }
+
     // Thông tin in ra bảng
     public String getInfo() {
         return String.format("%-6s | Phòng %-6s | %s -> %s | %-9s | Báo bởi: %s | Lý do: %s",

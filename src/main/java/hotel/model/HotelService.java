@@ -54,6 +54,45 @@ public abstract class HotelService {
     // Chuyển thành một dòng để ghi file (mỗi loại tự ghi thêm thuộc tính riêng)
     public abstract String toFileString();
 
+    // Chuyển một dòng từ file thành đối tượng HotelService đúng loại (FoodService, LaundryService, SpaService)
+    public static HotelService fromFileString(String line) {
+        String[] p = FileUtil.split(line);
+        if (p.length < 7) {
+            throw new IllegalArgumentException("Dòng dữ liệu dịch vụ không đủ số trường: " + line);
+        }
+        String type = p[0].trim();
+        String id = p[1].trim();
+        String name = p[2].trim();
+        double price = Double.parseDouble(p[3].trim());
+        String unit = p[4].trim();
+        String desc = p[5].trim();
+        boolean available = Boolean.parseBoolean(p[6].trim());
+
+        if ("FOOD".equalsIgnoreCase(type)) {
+            if (p.length < 9) {
+                throw new IllegalArgumentException("Dòng dịch vụ Ăn uống không đủ trường: " + line);
+            }
+            String category = p[7].trim();
+            int prepMinutes = Integer.parseInt(p[8].trim());
+            return new FoodService(id, name, price, unit, desc, available, category, prepMinutes);
+        } else if ("LAUNDRY".equalsIgnoreCase(type)) {
+            if (p.length < 9) {
+                throw new IllegalArgumentException("Dòng dịch vụ Giặt ủi không đủ trường: " + line);
+            }
+            String chargeBy = p[7].trim();
+            int turnaroundHours = Integer.parseInt(p[8].trim());
+            return new LaundryService(id, name, price, unit, desc, available, chargeBy, turnaroundHours);
+        } else if ("SPA".equalsIgnoreCase(type)) {
+            if (p.length < 9) {
+                throw new IllegalArgumentException("Dòng dịch vụ Spa không đủ trường: " + line);
+            }
+            String treatmentType = p[7].trim();
+            int durationMinutes = Integer.parseInt(p[8].trim());
+            return new SpaService(id, name, price, unit, desc, available, treatmentType, durationMinutes);
+        }
+        throw new IllegalArgumentException("Loại dịch vụ không hợp lệ: " + type);
+    }
+
     // Ngưng cung cấp dịch vụ
     public void deactivate() {
         this.available = false;
