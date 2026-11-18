@@ -41,17 +41,17 @@ public class Main {
         AccountManager accountManager = new AccountManager(employeeManager);
         CustomerManager customerManager = new CustomerManager();
         RoomManager roomManager = new RoomManager();
-        BookingManager bookingManager = new BookingManager();
         ServiceManager serviceManager = new ServiceManager();
         InvoiceManager invoiceManager = new InvoiceManager(100);
         ReportService reportService = new ReportService(invoiceManager);
-        // 2. Nạp file đúng thứ tự: Employee -> Account -> Customer
+
+        // 2. Nạp file
         employeeManager.readFile();
         accountManager.readFile();
         customerManager.readFile();
         roomManager.readFile();
         serviceManager.readFile();
- 
+        invoiceManager.readFile();
         boolean freshInstall = isFreshInstall(Paths.get("data"));
 
         // 3. Lần chạy đầu: tạo Admin mặc định (đã có Admin thì không làm gì)
@@ -85,6 +85,8 @@ public class Main {
             employeeManager.writeFile();
             accountManager.writeFile();
             customerManager.writeFile();
+            roomManager.writeFile();
+            serviceManager.writeFile();
             invoiceManager.writeFile();
             roomManager.writeFile();
             serviceManager.writeFile();

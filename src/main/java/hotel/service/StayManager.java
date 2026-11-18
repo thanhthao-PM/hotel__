@@ -546,59 +546,83 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
         String[] errors = new String[0];
 
         try {
-            for (String line : FileUtil.readAllLines(path(STAY_FILE))) {
-                try {
-                    StayRecord s = StayRecord.fromFileLine(line);
-                    if (findById(s.getStayId()) != null) throw new IllegalArgumentException("Trùng mã " + s.getStayId());
-                    if (bookings.getLine(s.getBookingDetailId()) == null)
-                        throw new IllegalArgumentException("BookingDetail " + s.getBookingDetailId() + " không tồn tại");
-                    appendStay(s);
-                    StayRecord.updateCounterFromId(s.getStayId());
-                } catch (RuntimeException e) {
-                    errors = addError(errors, STAY_FILE, line, e);
+            String stayPath = path(STAY_FILE);
+            if (java.nio.file.Files.exists(java.nio.file.Paths.get(stayPath))) {
+                for (String line : FileUtil.readAllLines(stayPath)) {
+                    if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+                    try {
+                        StayRecord s = StayRecord.fromFileLine(line);
+                        if (findById(s.getStayId()) != null) throw new IllegalArgumentException("Trùng mã " + s.getStayId());
+                        appendStay(s);
+                        StayRecord.updateCounterFromId(s.getStayId());
+                    } catch (RuntimeException e) {
+                        errors = addError(errors, STAY_FILE, line, e);
+                    }
                 }
             }
-            for (String line : FileUtil.readAllLines(path(GUEST_FILE))) {
-                try {
-                    StayGuest g = StayGuest.fromFileLine(line);
-                    StayRecord s = findById(g.getStayId());
-                    if (s == null) throw new IllegalArgumentException("Lượt ở " + g.getStayId() + " không tồn tại");
-                    s.addGuest(g);
-                    StayGuest.updateCounterFromId(g.getId());
-                } catch (RuntimeException e) {
-                    errors = addError(errors, GUEST_FILE, line, e);
+
+            String guestPath = path(GUEST_FILE);
+            if (java.nio.file.Files.exists(java.nio.file.Paths.get(guestPath))) {
+                for (String line : FileUtil.readAllLines(guestPath)) {
+                    if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+                    try {
+                        StayGuest g = StayGuest.fromFileLine(line);
+                        StayRecord s = findById(g.getStayId());
+                        if (s == null) throw new IllegalArgumentException("Lượt ở " + g.getStayId() + " không tồn tại");
+                        if (!s.hasGuest(g.getGuestId())) {
+                            s.addGuest(g);
+                        }
+                        StayGuest.updateCounterFromId(g.getId());
+                    } catch (RuntimeException e) {
+                        errors = addError(errors, GUEST_FILE, line, e);
+                    }
                 }
             }
-            for (String line : FileUtil.readAllLines(path(USAGE_FILE))) {
-                try {
-                    ServiceUsage u = ServiceUsage.fromFileLine(line);
-                    StayRecord s = findById(u.getStayId());
-                    if (s == null) throw new IllegalArgumentException("Lượt ở " + u.getStayId() + " không tồn tại");
-                    if (!u.isValidQuantity()) throw new IllegalArgumentException("Số lượng không hợp lệ");
-                    s.loadUsage(u);
-                    ServiceUsage.updateCounterFromId(u.getUsageId());
-                } catch (RuntimeException e) {
-                    errors = addError(errors, USAGE_FILE, line, e);
+
+            String usagePath = path(USAGE_FILE);
+            if (java.nio.file.Files.exists(java.nio.file.Paths.get(usagePath))) {
+                for (String line : FileUtil.readAllLines(usagePath)) {
+                    if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+                    try {
+                        ServiceUsage u = ServiceUsage.fromFileLine(line);
+                        StayRecord s = findById(u.getStayId());
+                        if (s == null) throw new IllegalArgumentException("Lượt ở " + u.getStayId() + " không tồn tại");
+                        if (!u.isValidQuantity()) throw new IllegalArgumentException("Số lượng không hợp lệ");
+                        s.loadUsage(u);
+                        ServiceUsage.updateCounterFromId(u.getUsageId());
+                    } catch (RuntimeException e) {
+                        errors = addError(errors, USAGE_FILE, line, e);
+                    }
                 }
             }
-            for (String line : FileUtil.readAllLines(path(CHECKIN_FILE))) {
-                try {
-                    CheckInReceipt r = CheckInReceipt.fromFileLine(line);
-                    if (findById(r.getStayId()) == null) throw new IllegalArgumentException("Lượt ở " + r.getStayId() + " không tồn tại");
-                    appendCheckIn(r);
-                    CheckInReceipt.updateCounterFromId(r.getReceiptId());
-                } catch (RuntimeException e) {
-                    errors = addError(errors, CHECKIN_FILE, line, e);
+
+            String checkInPath = path(CHECKIN_FILE);
+            if (java.nio.file.Files.exists(java.nio.file.Paths.get(checkInPath))) {
+                for (String line : FileUtil.readAllLines(checkInPath)) {
+                    if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+                    try {
+                        CheckInReceipt r = CheckInReceipt.fromFileLine(line);
+                        if (findById(r.getStayId()) == null) throw new IllegalArgumentException("Lượt ở " + r.getStayId() + " không tồn tại");
+                        appendCheckIn(r);
+                        CheckInReceipt.updateCounterFromId(r.getReceiptId());
+                    } catch (RuntimeException e) {
+                        errors = addError(errors, CHECKIN_FILE, line, e);
+                    }
                 }
             }
-            for (String line : FileUtil.readAllLines(path(CHECKOUT_FILE))) {
-                try {
-                    CheckOutReceipt r = CheckOutReceipt.fromFileLine(line);
-                    if (findById(r.getStayId()) == null) throw new IllegalArgumentException("Lượt ở " + r.getStayId() + " không tồn tại");
-                    appendCheckOut(r);
-                    CheckOutReceipt.updateCounterFromId(r.getReceiptId());
-                } catch (RuntimeException e) {
-                    errors = addError(errors, CHECKOUT_FILE, line, e);
+
+            String checkOutPath = path(CHECKOUT_FILE);
+            if (java.nio.file.Files.exists(java.nio.file.Paths.get(checkOutPath))) {
+                for (String line : FileUtil.readAllLines(checkOutPath)) {
+                    if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
+                    try {
+                        CheckOutReceipt r = CheckOutReceipt.fromFileLine(line);
+                        if (findById(r.getStayId()) == null) throw new IllegalArgumentException("Lượt ở " + r.getStayId() + " không tồn tại");
+                        appendCheckOut(r);
+                        CheckOutReceipt.updateCounterFromId(r.getReceiptId());
+                    } catch (RuntimeException e) {
+                        errors = addError(errors, CHECKOUT_FILE, line, e);
+                    }
                 }
             }
             loadErrors = errors;
@@ -621,25 +645,20 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
             for (int i = 0; i < count; i++) lines[i] = stays[i].toFileLine();
             FileUtil.writeAllLines(path(STAY_FILE), lines, count);
 
-            String[] guestLines = new String[0];
             String[] usageLines = new String[0];
-            int gn = 0, un = 0;
+            int un = 0;
             for (int i = 0; i < count; i++) {
-                for (StayGuest g : stays[i].getGuests()) {
-                    if (gn == guestLines.length) guestLines = Arrays.copyOf(guestLines, Math.max(8, gn * 2));
-                    guestLines[gn++] = g.toFileLine();
-                }
                 for (ServiceUsage u : stays[i].getUsages()) {
                     if (un == usageLines.length) usageLines = Arrays.copyOf(usageLines, Math.max(8, un * 2));
                     usageLines[un++] = u.toFileLine();
                 }
             }
-            FileUtil.writeAllLines(path(GUEST_FILE), guestLines, gn);
             FileUtil.writeAllLines(path(USAGE_FILE), usageLines, un);
 
             String[] ci = new String[checkInCount];
             for (int i = 0; i < checkInCount; i++) ci[i] = checkIns[i].toFileLine();
             FileUtil.writeAllLines(path(CHECKIN_FILE), ci, checkInCount);
+
             String[] co = new String[checkOutCount];
             for (int i = 0; i < checkOutCount; i++) co[i] = checkOuts[i].toFileLine();
             FileUtil.writeAllLines(path(CHECKOUT_FILE), co, checkOutCount);
@@ -650,7 +669,21 @@ public class StayManager implements IManager<StayRecord>, IFileHandler {
 
     public String[] getLoadErrors() { return loadErrors; }
 
-    private String path(String name) { return dataDir + "/" + name; }
+    private String path(String name) {
+        if (java.nio.file.Files.exists(java.nio.file.Paths.get("file", name))) {
+            return "file/" + name;
+        }
+        if (java.nio.file.Files.exists(java.nio.file.Paths.get("src/main/java/hotel/file", name))) {
+            return "src/main/java/hotel/file/" + name;
+        }
+        if (dataDir != null && java.nio.file.Files.exists(java.nio.file.Paths.get(dataDir, name))) {
+            return dataDir + "/" + name;
+        }
+        if (java.nio.file.Files.exists(java.nio.file.Paths.get("src/main/java/hotel/file"))) {
+            return "src/main/java/hotel/file/" + name;
+        }
+        return "file/" + name;
+    }
 
     private static String[] addError(String[] errors, String file, String line, RuntimeException e) {
         String[] r = Arrays.copyOf(errors, errors.length + 1);

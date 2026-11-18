@@ -6,7 +6,7 @@ import hotel.model.enums.Gender;
 
 public class Customer extends Person {
 
-    private static final String PREFIX   = "KH";        // tiền tố mã: KH001, KH002...
+    private static final String PREFIX   = "CU";        // tiền tố mã: CU001, CU002...
     public static final String TYPE_TAG = "CUSTOMER";  // nhãn loại ghi ở đầu dòng file
     private static final String SEP      = "|";         // ký tự ngăn cách
 

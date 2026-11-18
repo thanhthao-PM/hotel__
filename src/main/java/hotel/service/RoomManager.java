@@ -42,24 +42,30 @@ public class RoomManager implements IManager<Room>, IFileHandler {
     // Thêm phòng mới: không trùng mã, không trùng số phòng, giá và sức chứa phải dương
     @Override
     public boolean add(Room room) {
-        if (room == null) {
-            return false;
-        }
-        if (findById(room.getRoomId()) != null) {
-            System.out.println("Lỗi: mã phòng đã tồn tại.");
-            return false;
-        }
-        if (findByRoomNumber(room.getRoomNumber()) != null) {
-            System.out.println("Lỗi: số phòng đã tồn tại.");
-            return false;
-        }
-        if (room.getBasePrice() <= 0 || room.getCapacity() <= 0) {
-            System.out.println("Lỗi: giá và sức chứa phải lớn hơn 0.");
-            return false;
-        }
-        rooms.add(room);
-        return true;
+    if (room == null) {
+        return false;
     }
+
+    if (findById(room.getRoomId()) != null) {
+        return false;
+    }
+
+    if (findByRoomNumber(room.getRoomNumber()) != null) {
+        return false;
+    }
+
+    if (room.getCapacity() <= 0 || room.getBasePrice() <= 0) {
+        return false;
+    }
+
+    // Thêm phòng vào danh sách
+    rooms.add(room);
+
+    // Ghi lại toàn bộ danh sách xuống file
+    writeToFile();
+
+    return true;
+}
 
     @Override
     public boolean remove(String id) {
