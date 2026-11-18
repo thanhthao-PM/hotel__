@@ -10,10 +10,17 @@ import hotel.model.Employee;
 import hotel.model.GuestMember;
 import hotel.model.Person;
 import hotel.model.Room;
+import hotel.model.FoodService;
+import hotel.model.HotelService;
+import hotel.model.LaundryService;
+import hotel.model.SpaService;
+import hotel.model.StandardRoom;
+import hotel.model.VipRoom;
 import hotel.model.enums.Gender;
 import hotel.model.enums.PaymentMethod;
 import hotel.model.enums.Role;
 import hotel.model.enums.RequestStatus;
+import hotel.model.enums.RoomStatus;
 import hotel.service.AccountManager;
 import hotel.service.BookingManager;
 import hotel.service.CustomerManager;
@@ -59,61 +66,63 @@ public class ConsoleMenu {
     private static final int FRAME_WIDTH = 60;
     private static final String INDENT = "    ";
 
-    private final Scanner sc = new Scanner(System.in);   // CHỈ MỘT Scanner cho cả chương trình
+    private final Scanner sc = new Scanner(System.in); // CHỈ MỘT Scanner cho cả chương trình
 
     private final AccountManager accountManager;
     private final EmployeeManager employeeManager;
     private final CustomerManager customerManager;
-    
-    private final InvoiceManager invoiceManager; // THÊM 2 DÒNG NÀY: để gọi nghiệp vụ và báo cáo
-    private final ReportService reportService; // THÊM 2 DÒNG NÀY: để gọi nghiệp vụ và báo cáo
+
+    private final InvoiceManager invoiceManager;
+    private final ReportService reportService;
+
     // P4 thêm --
     private StayManager stayManager;
     // P4 hết ---
+
     private final RoomManager roomManager;
     private final BookingManager bookingManager;
+    private final ServiceManager serviceManager;
 
-    private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
+    private Account currentUser;
     private int depth = 0;
 
     // P4 thêm --
-    public void setStayManager(StayManager stayManager) { this.stayManager = stayManager; }
+    public void setStayManager(StayManager stayManager) {
+        this.stayManager = stayManager;
+    }
     // P4 hết ---
 
-
     public ConsoleMenu(AccountManager accountManager,
-                   EmployeeManager employeeManager,
+                       EmployeeManager employeeManager,
                        CustomerManager customerManager,
                        RoomManager roomManager,
                        ServiceManager serviceManager,
                        InvoiceManager invoiceManager,
                        ReportService reportService) {
-        
-        private Account currentUser;                         // người đang đăng nhập (null = chưa đăng nhập)
-        private int depth = 0;
-        this(accountManager, employeeManager, customerManager, new RoomManager(), new BookingManager());
-}
 
-public ConsoleMenu(AccountManager accountManager,
-                   EmployeeManager employeeManager,
-                   CustomerManager customerManager,
-                   RoomManager roomManager,
-                   BookingManager bookingManager,
-                   ServiceManager serviceManager,
-                   InvoiceManager invoiceManager,
-                   ReportService reportService) {
+        this(accountManager, employeeManager, customerManager,
+             roomManager, new BookingManager(), serviceManager,
+             invoiceManager, reportService);
+    }
 
-    this.accountManager = accountManager;
-    this.employeeManager = employeeManager;
-    this.customerManager = customerManager;
-    this.roomManager = roomManager;
-    this.bookingManager = bookingManager;
-    this.roomManager = roomManager;
-    this.serviceManager = serviceManager;
-    // THÊM 2 DÒNG NÀY:
-    this.invoiceManager = invoiceManager; // để gọi nghiệp vụ và báo cáo
-    this.reportService = reportService;
-}
+    public ConsoleMenu(AccountManager accountManager,
+                       EmployeeManager employeeManager,
+                       CustomerManager customerManager,
+                       RoomManager roomManager,
+                       BookingManager bookingManager,
+                       ServiceManager serviceManager,
+                       InvoiceManager invoiceManager,
+                       ReportService reportService) {
+
+        this.accountManager = accountManager;
+        this.employeeManager = employeeManager;
+        this.customerManager = customerManager;
+        this.roomManager = roomManager;
+        this.bookingManager = bookingManager;
+        this.serviceManager = serviceManager;
+        this.invoiceManager = invoiceManager;
+        this.reportService = reportService;
+    }
 
     // ============================================================
     // VÒNG CHẠY CHÍNH
@@ -132,7 +141,7 @@ public ConsoleMenu(AccountManager accountManager,
                 default:       showEmployeeMenu(); break;
             }
 
-            saveAll();            // đăng xuất thì lưu dữ liệu
+            saveAll();
             currentUser = null;
         }
     }
@@ -152,7 +161,7 @@ public ConsoleMenu(AccountManager accountManager,
                 Account acc = accountManager.login(username, password);
                 if (acc.isMustChangePassword()) {
                     System.out.println("Đây là lần đăng nhập đầu tiên, bạn phải đổi mật khẩu.");
-                    changePassword(acc, false);   // false = không cho hủy
+                    changePassword(acc, false);
                 }
                 return acc;
             } catch (RuntimeException e) {
@@ -165,6 +174,7 @@ public ConsoleMenu(AccountManager accountManager,
         employeeManager.writeFile();
         accountManager.writeFile();
         customerManager.writeFile();
+
         // P4 thêm --
         if (stayManager != null) stayManager.writeFile();
         // P4 hết --
@@ -1241,6 +1251,170 @@ public ConsoleMenu(AccountManager accountManager,
     }
 
     // ---------- MODULE P2: BẢO TRÌ PHÒNG ----------
+    private void findFreeRooms() {
+        roomManager.displayList(roomManager.findByStatus(RoomStatus.AVAILABLE));
+    }
+
+    private void searchRooms() {
+        String keyword = readNonEmpty("Nhập mã hoặc số phòng cần tìm").toUpperCase();
+        Room room = roomManager.findById(keyword);
+        if (room == null) room = roomManager.findByRoomNumber(keyword);
+        if (room == null) System.out.println("Không tìm thấy phòng.");
+        else System.out.println(room.getRoomInfo());
+    }
+
+    private void sortRooms() {
+        roomManager.displayList(roomManager.sortByPrice(confirm("Sắp xếp tăng dần?")));
+    }
+
+    private void changeRoomStatus() {
+        String id = readNonEmpty("Mã phòng").toUpperCase();
+        String value = readNonEmpty("Trạng thái mới (AVAILABLE, BOOKED, OCCUPIED, CLEANING, MAINTENANCE)").toUpperCase();
+        try {
+            if (roomManager.changeRoomStatus(id, RoomStatus.valueOf(value))) {
+                System.out.println("Đổi trạng thái thành công.");
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Trạng thái không hợp lệ.");
+        }
+    }
+
+    private void addRoom() {
+        String type = readNonEmpty("Loại phòng (STANDARD/VIP)").toUpperCase();
+        String number = readNonEmpty("Số phòng");
+        int floor = readPositiveInt("Tầng");
+        int capacity = readPositiveInt("Sức chứa");
+        double price = readPositiveDouble("Giá một đêm");
+        try {
+            Room room;
+            if ("VIP".equals(type)) {
+                room = new VipRoom(Room.generateId(), number, floor, capacity, price,
+                        RoomStatus.AVAILABLE, true, readPositiveDouble("Tỷ lệ phụ thu"),
+                        readNonEmpty("Tiện nghi"), readNonEmpty("Hướng nhìn"));
+            } else if ("STANDARD".equals(type)) {
+                room = new StandardRoom(Room.generateId(), number, floor, capacity, price,
+                        RoomStatus.AVAILABLE, true, readNonEmpty("Loại giường"), readPositiveInt("Số giường"));
+            } else {
+                System.out.println("Loại phòng không hợp lệ.");
+                return;
+            }
+            System.out.println(roomManager.add(room) ? "Thêm phòng thành công." : "Không thể thêm phòng.");
+        } catch (RuntimeException e) {
+            System.out.println("Lỗi: " + e.getMessage());
+        }
+    }
+
+    private void editRoom() {
+        String id = readNonEmpty("Mã phòng").toUpperCase();
+        Room room = roomManager.findById(id);
+        if (room == null) {
+            System.out.println("Không tìm thấy phòng.");
+            return;
+        }
+        room.setRoomNumber(readNonEmpty("Số phòng mới"));
+        room.setFloor(readPositiveInt("Tầng mới"));
+        room.setCapacity(readPositiveInt("Sức chứa mới"));
+        room.setBasePrice(readPositiveDouble("Giá mới"));
+        System.out.println(roomManager.update(room) ? "Cập nhật phòng thành công." : "Không thể cập nhật phòng.");
+    }
+
+    private void removeRoom() {
+        String id = readNonEmpty("Mã phòng").toUpperCase();
+        System.out.println(roomManager.delete(id) ? "Đã ngưng sử dụng phòng." : "Không thể ngưng sử dụng phòng.");
+    }
+
+    private void changeRoomPrice() {
+        String id = readNonEmpty("Mã phòng").toUpperCase();
+        double price = readPositiveDouble("Giá mới");
+        System.out.println(roomManager.changePrice(id, price) ? "Đổi giá thành công." : "Không thể đổi giá.");
+    }
+
+    private void searchServices() {
+        String keyword = readNonEmpty("Từ khóa tên dịch vụ");
+        ArrayList<HotelService> result = serviceManager.findByName(keyword);
+        if (result.isEmpty()) System.out.println("Không tìm thấy dịch vụ.");
+        else for (HotelService service : result) System.out.println(service.getServiceInfo());
+    }
+
+    private void sortServices() {
+        for (HotelService service : serviceManager.sortByPrice(confirm("Sắp xếp tăng dần?"))) {
+            System.out.println(service.getServiceInfo());
+        }
+    }
+
+    private void addService() {
+        String type = readNonEmpty("Loại dịch vụ (FOOD/LAUNDRY/SPA)").toUpperCase();
+        String id = HotelService.generateId();
+        String name = readNonEmpty("Tên dịch vụ");
+        double price = readPositiveDouble("Đơn giá");
+        String unit = readNonEmpty("Đơn vị tính");
+        String description = readNonEmpty("Mô tả");
+        try {
+            HotelService service;
+            if ("FOOD".equals(type)) {
+                service = new FoodService(id, name, price, unit, description, true,
+                        readNonEmpty("Nhóm món"), readPositiveInt("Thời gian chuẩn bị (phút)"));
+            } else if ("LAUNDRY".equals(type)) {
+                service = new LaundryService(id, name, price, unit, description, true,
+                        readNonEmpty("Cách tính (PER_KG/PER_ITEM)").toUpperCase(), readPositiveInt("Thời gian trả (giờ)"));
+            } else if ("SPA".equals(type)) {
+                service = new SpaService(id, name, price, unit, description, true,
+                        readNonEmpty("Loại liệu trình"), readPositiveInt("Thời lượng (phút)"));
+            } else {
+                System.out.println("Loại dịch vụ không hợp lệ.");
+                return;
+            }
+            System.out.println(serviceManager.add(service) ? "Thêm dịch vụ thành công." : "Không thể thêm dịch vụ.");
+        } catch (RuntimeException e) {
+            System.out.println("Lỗi: " + e.getMessage());
+        }
+    }
+
+    private void editService() {
+        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        HotelService service = serviceManager.findById(id);
+        if (service == null) {
+            System.out.println("Không tìm thấy dịch vụ.");
+            return;
+        }
+        service.setName(readNonEmpty("Tên mới"));
+        service.setUnit(readNonEmpty("Đơn vị tính mới"));
+        service.setDescription(readNonEmpty("Mô tả mới"));
+        service.setUnitPrice(readPositiveDouble("Đơn giá mới"));
+        System.out.println(serviceManager.update(service) ? "Cập nhật dịch vụ thành công." : "Không thể cập nhật.");
+    }
+
+    private void changeServicePrice() {
+        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        double price = readPositiveDouble("Đơn giá mới");
+        System.out.println(serviceManager.changePrice(id, price) ? "Đổi đơn giá thành công." : "Không thể đổi đơn giá.");
+    }
+
+    private void deactivateService() {
+        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        System.out.println(serviceManager.deactivateService(id) ? "Đã ngưng cung cấp." : "Không thể ngưng cung cấp.");
+    }
+
+    private void activateService() {
+        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        System.out.println(serviceManager.activateService(id) ? "Đã cung cấp lại." : "Không thể cung cấp lại.");
+    }
+
+    private void reportMaintenance() {
+        String roomId = readNonEmpty("Mã phòng").toUpperCase();
+        LocalDate start = readDate("Ngày bắt đầu (dd/MM/yyyy)");
+        LocalDate end = readDate("Ngày kết thúc (dd/MM/yyyy)");
+        String reason = readNonEmpty("Lý do bảo trì");
+        String reportedBy = currentUser == null ? "NhanVien" : currentUser.getUsername();
+        System.out.println(roomManager.createMaintenance(roomId, start, end, reason, reportedBy)
+                ? "Đã báo bảo trì." : "Không thể báo bảo trì.");
+    }
+
+    private void closeMaintenance() {
+        String id = readNonEmpty("Mã bản ghi bảo trì").toUpperCase();
+        System.out.println(roomManager.closeMaintenance(id) ? "Đã đóng bản ghi bảo trì." : "Không thể đóng bản ghi.");
+    }
+
     private void showMaintenanceMenu() {
         while (true) {
             printTitle("BẢO TRÌ PHÒNG");

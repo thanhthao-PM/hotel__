@@ -249,10 +249,6 @@ public class BookingManager {
         return null;
     }
 
-    public List<BookingRequest> getAllRequests() {
-        return requestList.getAll();
-    }
-
     public Deposit[] getAllDeposits() {
         return deposits.getAll();
     }

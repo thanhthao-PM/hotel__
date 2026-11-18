@@ -28,6 +28,8 @@ public class Validator {
 
     // Nhập một chuỗi không rỗng, nhập sai thì hỏi lại
     public static String inputString(Scanner sc, String prompt) {
+        // Scanner null sẽ gây NullPointerException ở sc.nextLine()
+        checkScanner(sc);
         while (true) {
             System.out.print(prompt);
             String s = sc.nextLine().trim();
@@ -40,6 +42,12 @@ public class Validator {
 
     // Nhập số nguyên trong khoảng [min, max], nhập sai thì hỏi lại
     public static int inputInt(Scanner sc, String prompt, int min, int max) {
+        // Scanner null
+        checkScanner(sc);
+        // min > max thì không giá trị nào hợp lệ, vòng lặp bên dưới sẽ hỏi mãi không dừng
+        if (min > max) {
+            throw new IllegalArgumentException("Giá trị nhỏ nhất (" + min + ") lớn hơn giá trị lớn nhất (" + max + ")");
+        }
         while (true) {
             System.out.print(prompt);
             String s = sc.nextLine().trim();
@@ -57,11 +65,18 @@ public class Validator {
 
     // Nhập số thực không nhỏ hơn min, nhập sai thì hỏi lại
     public static double inputDouble(Scanner sc, String prompt, double min) {
+        // Scanner null
+        checkScanner(sc);
         while (true) {
             System.out.print(prompt);
             String s = sc.nextLine().trim();
             try {
                 double value = Double.parseDouble(s);
+                // chặn NaN và vô cực (Double.parseDouble nhận "NaN", "Infinity"; NaN >= min là false nên cũng bị chặn, nhưng Infinity thì lọt qua)
+                if (Double.isNaN(value) || Double.isInfinite(value)) {
+                    System.out.println("Lỗi: vui lòng nhập một số hợp lệ.");
+                    continue;
+                }
                 if (value >= min) {
                     return value;
                 }
@@ -74,6 +89,8 @@ public class Validator {
 
     // Nhập ngày theo định dạng dd/MM/yyyy, nhập sai thì hỏi lại
     public static LocalDate inputDate(Scanner sc, String prompt) {
+        // Scanner null
+        checkScanner(sc);
         while (true) {
             System.out.print(prompt + " (dd/MM/yyyy): ");
             String s = sc.nextLine().trim();
@@ -87,6 +104,8 @@ public class Validator {
 
     // Hỏi xác nhận có/không (dùng cho thao tác nguy hiểm như xóa)
     public static boolean confirm(Scanner sc, String prompt) {
+        // Scanner null
+        checkScanner(sc);
         while (true) {
             System.out.print(prompt + " (y/n): ");
             String s = sc.nextLine().trim().toLowerCase();
@@ -97,6 +116,13 @@ public class Validator {
                 return false;
             }
             System.out.println("Lỗi: chỉ nhập y hoặc n.");
+        }
+    }
+
+    // hàm dùng chung cho các hàm nhập liệu (CheckingExpression chưa có kiểm tra null cho đối tượng)
+    private static void checkScanner(Scanner sc) {
+        if (sc == null) {
+            throw new IllegalArgumentException("Scanner không được null");
         }
     }
 }

@@ -20,6 +20,7 @@ import hotel.service.EmployeeManager;
 import hotel.service.InvoiceManager;
 import hotel.service.ReportService;
 import hotel.service.RoomManager;
+import hotel.service.ServiceManager;
 import hotel.ui.ConsoleMenu;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ public class Main {
         CustomerManager customerManager = new CustomerManager();
         RoomManager roomManager = new RoomManager();
         BookingManager bookingManager = new BookingManager();
+        ServiceManager serviceManager = new ServiceManager();
         InvoiceManager invoiceManager = new InvoiceManager(100);
         ReportService reportService = new ReportService(invoiceManager);
         // 2. Nạp file đúng thứ tự: Employee -> Account -> Customer
@@ -44,6 +46,7 @@ public class Main {
         accountManager.readFile();
         customerManager.readFile();
         roomManager.readFile();
+        serviceManager.readFile();
  
         boolean freshInstall = isFreshInstall(Paths.get("data"));
 
@@ -57,14 +60,15 @@ public class Main {
  
         // 4. Chạy menu; finally đảm bảo luôn ghi file dù thoát kiểu gì
         try {
-            new ConsoleMenu(accountManager, employeeManager, customerManager, invoiceManager, reportService,
-                    roomManager, bookingManager).run();
+            new ConsoleMenu(accountManager, employeeManager, customerManager, roomManager,
+                    bookingManager, serviceManager, invoiceManager, reportService).run();
         } finally {
             employeeManager.writeFile();
             accountManager.writeFile();
             customerManager.writeFile();
             invoiceManager.writeFile();
             roomManager.writeFile();
+            serviceManager.writeFile();
         }
     }
 
