@@ -5,9 +5,9 @@ import hotel.model.Employee;
 import hotel.model.enums.Gender;
 import hotel.model.enums.Role;
 import hotel.storage.IFileHandler;
+import hotel.util.FileUtil;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import hotel.util.CheckingExpression;
@@ -19,7 +19,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class AccountManager implements IManager<Account>, IFileHandler {
-    private static final String FILE_PATH = "data/account.txt";
+    private static final String FILE_PATH = "file/account.txt";
     private static final int INITIAL_CAPACITY = 10;
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "admin123";   // phải đủ độ dài tối thiểu
@@ -249,18 +249,12 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     }
 
     @Override public void writeFile() {
-        Path path = Paths.get(FILE_PATH);
+        String[] lines = new String[count];
+        for (int i = 0; i < count; i++) {
+            lines[i] = items[i].toFileString();
+        }
         try {
-            Path parent = path.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);     // chưa có thư mục data thì tạo
-            }
-            try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-                for (int i = 0; i < count; i++) {
-                    writer.write(items[i].toFileString());
-                    writer.newLine();
-                }
-            }
+            FileUtil.writeAllLines(FILE_PATH, lines, count);
         } catch (IOException ex) {
             System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
         }
