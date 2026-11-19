@@ -16,10 +16,8 @@ import hotel.util.FileUtil;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class InvoiceManager implements IFileHandler, StayLinks.InvoiceGateway {
+public class InvoiceManager implements IFileHandler {
 
-    // Thư mục chứa 6 file txt của nhóm (nếu sau này đổi sang "data" chỉ cần sửa dòng này)
-    public static final String DATA_DIR = "src/main/java/hotel/file";
     private static final double LATE_CHECKOUT_FEE_PER_HOUR = 50000;
 
     private Invoice[] invoices;
@@ -44,6 +42,43 @@ public class InvoiceManager implements IFileHandler, StayLinks.InvoiceGateway {
             invoices = newArray;
         }
         invoices[count++] = invoice;
+    }
+
+    public Invoice createInvoiceForStay(StayRecord stay, double roomUnitPrice,
+                                        double depositShare, CheckOutReceipt receipt,
+                                        String employeeId) {
+        if (stay == null) throw new IllegalArgumentException("Lượt lưu trú không được null");
+        CheckingExpression.checkPositiveDouble(roomUnitPrice, "Giá phòng phải > 0");
+        CheckingExpression.checkNonNegativeDouble(depositShare, "Tiền cọc không được âm");
+
+        Invoice existing = findByStayId(stay.getStayId());
+        if (existing != null) return existing;
+
+        Invoice invoice = new Invoice(stay.getStayId(), employeeId, depositShare);
+        long nights = stay.calculateNights();
+        invoice.addDetail(new InvoiceDetail(
+                InvoiceDetail.generateId(), invoice.getInvoiceId(), Invoice.LineType.ROOM,
+                "Phòng " + stay.getRoomId() + ", " + nights + " đêm",
+                stay.getRoomId(), null, null, nights, roomUnitPrice));
+
+        for (ServiceUsage usage : stay.getUsages()) {
+            if (usage.isCancelled() || usage.getUnitPriceAtUse() <= 0) continue;
+            invoice.addDetail(new InvoiceDetail(
+                    InvoiceDetail.generateId(), invoice.getInvoiceId(), Invoice.LineType.SERVICE,
+                    "Dịch vụ " + usage.getServiceId(), null, usage.getServiceId(),
+                    usage.getUsageId(), usage.getQuantity(), usage.getUnitPriceAtUse()));
+        }
+
+        if (receipt != null && receipt.getLateHours() > 0) {
+            double fee = receipt.getLateHours() * LATE_CHECKOUT_FEE_PER_HOUR;
+            invoice.addExtraCharge(new ExtraCharge(
+                    ExtraCharge.generateId(), invoice.getInvoiceId(),
+                    "Trả phòng muộn " + receipt.getLateHours() + " giờ",
+                    fee, employeeId));
+        }
+
+        addInvoice(invoice);
+        return invoice;
     }
 
     public Invoice findByInvoiceId(String id) {
@@ -78,90 +113,46 @@ public class InvoiceManager implements IFileHandler, StayLinks.InvoiceGateway {
         }
     }
 
-    // Cổng kết nối cho P4 (StayManager) gọi khi khách trả phòng
-    @Override
-    public String createInvoiceForStay(StayRecord stay, CheckOutReceipt receipt, String employeeId) {
-        if (stay == null) throw new IllegalArgumentException("StayRecord không được null");
-        Invoice existing = findByStayId(stay.getStayId());
-        if (existing != null) return existing.getInvoiceId();
-
-        Invoice inv = new Invoice(stay.getStayId(), employeeId, 0);
-
-        // Chuyển các lượt dùng dịch vụ của P4 sang dòng chi tiết hóa đơn
-        ServiceUsage[] usages = stay.getUsages();
-        if (usages != null) {
-            for (ServiceUsage u : usages) {
-                if (u == null) continue;
-                InvoiceDetail detail = new InvoiceDetail(
-                    InvoiceDetail.generateId(),
-                    inv.getInvoiceId(),
-                    Invoice.LineType.SERVICE,
-                    "Dịch vụ " + u.getServiceId(),
-                    "",
-                    u.getServiceId(),
-                    u.getUsageId(),
-                    u.getQuantity(),
-                    u.getUnitPriceAtUse()
-                );
-                inv.addDetail(detail);
-            }
-        }
-
-        // Nếu trả phòng muộn -> tự động thêm phụ thu
-        if (receipt != null && receipt.getLateHours() > 0) {
-            double fee = receipt.getLateHours() * LATE_CHECKOUT_FEE_PER_HOUR;
-            ExtraCharge lateCharge = new ExtraCharge(
-                ExtraCharge.generateId(),
-                inv.getInvoiceId(),
-                "Trả phòng muộn " + receipt.getLateHours() + " giờ",
-                fee,
-                employeeId
-            );
-            inv.addExtraCharge(lateCharge);
-        }
-
-        addInvoice(inv);
-        return inv.getInvoiceId();
-    }
-
-    @Override
-    public boolean hasInvoice(String stayId) {
-        return findByStayId(stayId) != null;
-    }
-
     // ĐỌC ĐỒNG LOẠT TỪ 6 FILE TXT (tự bỏ qua dòng ghi chú bắt đầu bằng #)
     @Override
     public void readFile() {
         this.count = 0;
+
         try {
-            for (String line : readDataLines(DATA_DIR + "/invoices.txt")) {
+            for (String line : readDataLines("src/main/java/hotel/file/invoices.txt")) {
                 addInvoice(Invoice.fromFileString(line));
             }
-            for (String line : readDataLines(DATA_DIR + "/invoice_details.txt")) {
+
+            for (String line : readDataLines("src/main/java/hotel/file/invoice_details.txt")) {
                 InvoiceDetail d = InvoiceDetail.fromFileString(line);
                 Invoice inv = findByInvoiceId(d.getInvoiceId());
                 if (inv != null) inv.addDetailFromFile(d);
             }
-            for (String line : readDataLines(DATA_DIR + "/extra_charges.txt")) {
+
+            for (String line : readDataLines("src/main/java/hotel/file/extra_charges.txt")) {
                 ExtraCharge ec = ExtraCharge.fromFileString(line);
                 Invoice inv = findByInvoiceId(ec.getInvoiceId());
                 if (inv != null) inv.addExtraChargeFromFile(ec);
             }
-            for (String line : readDataLines(DATA_DIR + "/discounts.txt")) {
+
+            for (String line : readDataLines("src/main/java/hotel/file/discounts.txt")) {
                 Discount dc = Discount.fromFileString(line);
                 Invoice inv = findByInvoiceId(dc.getInvoiceId());
                 if (inv != null) inv.addDiscountFromFile(dc);
             }
-            for (String line : readDataLines(DATA_DIR + "/payments.txt")) {
+
+            for (String line : readDataLines("src/main/java/hotel/file/payments.txt")) {
                 Payment pm = Payment.fromFileString(line);
                 Invoice inv = findByInvoiceId(pm.getInvoiceId());
                 if (inv != null) inv.addPaymentFromFile(pm);
             }
-            for (String line : readDataLines(DATA_DIR + "/refunds.txt")) {
+
+            for (String line : readDataLines("src/main/java/hotel/file/refunds.txt")) {
                 RefundRecord rf = RefundRecord.fromFileString(line);
                 Invoice inv = findByInvoiceId(rf.getInvoiceId());
                 if (inv != null) inv.addRefundFromFile(rf);
             }
+
         } catch (IOException | RuntimeException e) {
             System.out.println("Lỗi đọc file hóa đơn (P5): " + e.getMessage());
         }
@@ -212,12 +203,12 @@ public class InvoiceManager implements IFileHandler, StayLinks.InvoiceGateway {
         }
 
         try {
-            FileUtil.writeAllLines(DATA_DIR + "/invoices.txt", invLines, count);
-            FileUtil.writeAllLines(DATA_DIR + "/invoice_details.txt", dLines, dCount);
-            FileUtil.writeAllLines(DATA_DIR + "/extra_charges.txt", ecLines, ecCount);
-            FileUtil.writeAllLines(DATA_DIR + "/discounts.txt", dcLines, dcCount);
-            FileUtil.writeAllLines(DATA_DIR + "/payments.txt", pLines, pCount);
-            FileUtil.writeAllLines(DATA_DIR + "/refunds.txt", rLines, rCount);
+            FileUtil.writeAllLines("src/main/java/hotel/file/invoices.txt", invLines, count);
+            FileUtil.writeAllLines("src/main/java/hotel/file/invoice_details.txt", dLines, dCount);
+            FileUtil.writeAllLines("src/main/java/hotel/file/extra_charges.txt", ecLines, ecCount);
+            FileUtil.writeAllLines("src/main/java/hotel/file/discounts.txt", dcLines, dcCount);
+            FileUtil.writeAllLines("src/main/java/hotel/file/payments.txt", pLines, pCount);
+            FileUtil.writeAllLines("src/main/java/hotel/file/refunds.txt", rLines, rCount);
         } catch (IOException e) {
             System.out.println("Lỗi ghi file hóa đơn (P5): " + e.getMessage());
         }

@@ -28,7 +28,7 @@ public class ServiceManager implements IManager<HotelService>, IFileHandler {
     }
 
     // Đường dẫn file dữ liệu
-    public static final String FILE_PATH = resolvePath("services.txt");
+    public static final String FILE_PATH ="src/main/java/hotel/file/services.txt";
 
     // Mảng đối tượng (ArrayList) lưu dịch vụ
     private ArrayList<HotelService> services = new ArrayList<>();

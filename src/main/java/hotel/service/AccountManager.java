@@ -1,3 +1,4 @@
+
 package hotel.service;
 
 import hotel.model.Account;
@@ -19,7 +20,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class AccountManager implements IManager<Account>, IFileHandler {
-    private static final String FILE_PATH = "file/accounts.txt";
+
     private static final int INITIAL_CAPACITY = 10;
     private static final String DEFAULT_ADMIN_USERNAME = "admin";
     private static final String DEFAULT_ADMIN_PASSWORD = "admin123";   // phải đủ độ dài tối thiểu
@@ -185,7 +186,6 @@ public class AccountManager implements IManager<Account>, IFileHandler {
         }
     }
 
-
     public void displayAll() {
         if (count == 0) {
             System.out.println("Danh sách tài khoản trống");
@@ -215,7 +215,7 @@ public class AccountManager implements IManager<Account>, IFileHandler {
     }
 
     @Override public void readFile() {
-       Path path = Paths.get(FILE_PATH);
+        Path path = Paths.get("src/main/java/hotel/file/accounts.txt");
         if (!Files.exists(path)) {
             return;                                  // lần chạy đầu chưa có file, không phải lỗi
         }
@@ -244,8 +244,8 @@ public class AccountManager implements IManager<Account>, IFileHandler {
                 }
             }
         } catch (IOException ex) {
-            System.out.println("Không đọc được file " + FILE_PATH + ": " + ex.getMessage());
-        } 
+            System.out.println("Không đọc được file accounts.txt: " + ex.getMessage());
+        }
     }
 
     @Override public void writeFile() {
@@ -254,9 +254,9 @@ public class AccountManager implements IManager<Account>, IFileHandler {
             lines[i] = items[i].toFileString();
         }
         try {
-            FileUtil.writeAllLines(FILE_PATH, lines, count);
+            FileUtil.writeAllLines("src/main/java/hotel/file/accounts.txt", lines, count);
         } catch (IOException ex) {
-            System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
+            System.out.println("Không ghi được file accounts.txt: " + ex.getMessage());
         }
-    } 
+    }
 }

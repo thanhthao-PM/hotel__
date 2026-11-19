@@ -43,28 +43,34 @@ public class Customer extends Person {
         CheckingExpression.checkNotNullOrEmpty(fileString, "Dòng dữ liệu Customer không được để trống");
 
         String[] parts = fileString.split("\\|", -1);
-        if (parts.length != 10 || !TYPE_TAG.equals(parts[0])) {
+        boolean tagged = parts.length == 10 && TYPE_TAG.equals(parts[0]);
+        if (!tagged && parts.length != 9) {
             throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo Customer");
         }
-         // mã phải đúng dạng KHxxx trước khi cắt chuỗi, tránh StringIndexOutOfBoundsException
-        CheckingExpression.checkNotNullOrEmpty(parts[1], "Mã khách hàng không được để trống");
-        if (!parts[1].startsWith(PREFIX) || parts[1].length() <= PREFIX.length()) {
-            throw new IllegalArgumentException("Mã khách hàng không đúng định dạng " + PREFIX + "xxx: " + parts[1]);
+
+        int offset = tagged ? 1 : 0;
+        String id = parts[offset];
+        CheckingExpression.checkNotNullOrEmpty(id, "Mã khách hàng không được để trống");
+        if (!id.startsWith(PREFIX) || id.length() <= PREFIX.length()) {
+            throw new IllegalArgumentException("Mã khách hàng không đúng định dạng " + PREFIX + "xxx: " + id);
         }
-        
+
+        String address = parts[7];
+        String active = parts[8];
+        String email = tagged ? parts[9] : parts[6];
 
         Customer customer = new Customer(
-                parts[1], // id
-                parts[2], // name
-                parts[3], // phone
-                Gender.valueOf(parts[4]), // gender
-                parts[5], // identityNumber
-                LocalDate.parse(parts[6]), // dateOfBirth
-                parts[7], // address
-                Boolean.parseBoolean(parts[8]), // active
-                parts[9]  // email
+                id,
+                parts[offset + 1],
+                parts[offset + 2],
+                Gender.valueOf(parts[offset + 3]),
+                parts[offset + 4],
+                LocalDate.parse(parts[offset + 5]),
+                address,
+                Boolean.parseBoolean(active),
+                email
         );
-        Person.syncNextNumber(Integer.parseInt(parts[1].substring(PREFIX.length()))); // Đồng bộ nextNumber với ID từ file
+        Person.syncNextNumber(Integer.parseInt(id.substring(PREFIX.length())));
         return customer;
     }
 

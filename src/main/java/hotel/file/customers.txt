@@ -1,22 +1,11 @@
-# ============================================================
-# FILE: customers.txt  -  KHÁCH HÀNG (class Customer)
-# ============================================================
-# Quy ước: dòng bắt đầu bằng # là ghi chú | ngăn cách trường: | | rỗng = để trống
-# Mã = 2 chữ cái đầu + 3 số cuối: CU001, CU002...
-# Ngày: yyyy-MM-dd
-#
-# Cột: id|fullName|phone|gender|identityNumber|dateOfBirth|email|address|active
-#   identityNumber: CCCD hoặc số hộ chiếu
-#   active=false: khách đã bị xóa mềm
-# ============================================================
-
-CU001|Nguyễn Hoàng Nam|0912000001|MALE|079092001001|1992-05-20|nam.nguyen@email.com|25 Nguyễn Thị Minh Khai, Quận 1, TP.HCM|true
-CU002|Trần Thu Hà|0912000002|FEMALE|079094001002|1994-08-09|ha.tran@email.com|14 Pasteur, Quận 3, TP.HCM|true
-CU003|Lê Quốc Bảo|0912000003|MALE|048085001003|1985-10-30|bao.le@email.com|50 Bạch Đằng, Hải Châu, Đà Nẵng|true
-CU004|Phạm Ngọc Anh|0912000004|FEMALE|001096001004|1996-01-15|anh.pham@email.com|8 Trần Phú, Ba Đình, Hà Nội|true
-CU005|Vũ Đức Thịnh|0912000005|MALE|079089001005|1989-06-22|thinh.vu@email.com|120 Nguyễn Văn Cừ, Quận 5, TP.HCM|true
-CU006|Đinh Mai Phương|0912000006|FEMALE|092091001006|1991-12-03|phuong.dinh@email.com|33 Hòa Bình, Ninh Kiều, Cần Thơ|true
-CU007|John Smith|0912000007|MALE|B1234567|1980-04-11|john.smith@email.com|221 Baker Street, London, UK|true
-CU008|Nguyễn Thị Hồng|0912000008|FEMALE|079097001008|1997-09-27|hong.nguyen@email.com|19 Lê Văn Sỹ, Quận 3, TP.HCM|true
-CU009|Trịnh Văn Long|0912000009|MALE|079086001009|1986-03-05|long.trinh@email.com|67 Cộng Hòa, Tân Bình, TP.HCM|true
-CU010|Lý Thanh Tâm|0912000010|FEMALE|079090001010|1990-07-19|tam.ly@email.com|5 Phạm Ngọc Thạch, Quận 3, TP.HCM|false
+CUSTOMER|CU001|Nguyễn Hoàng Nam|0912000001|MALE|079092001001|1992-05-20|25 Nguyễn Thị Minh Khai, Quận 1, TP.HCM|true|nam.nguyen@email.com
+CUSTOMER|CU002|Trần Thu Hà|0912000002|FEMALE|079094001002|1994-08-09|14 Pasteur, Quận 3, TP.HCM|true|ha.tran@email.com
+CUSTOMER|CU003|Lê Quốc Bảo|0912000003|MALE|048085001003|1985-10-30|50 Bạch Đằng, Hải Châu, Đà Nẵng|true|bao.le@email.com
+CUSTOMER|CU004|Phạm Ngọc Anh|0912000004|FEMALE|001096001004|1996-01-15|8 Trần Phú, Ba Đình, Hà Nội|true|anh.pham@email.com
+CUSTOMER|CU005|Vũ Đức Thịnh|0912000005|MALE|079089001005|1989-06-22|120 Nguyễn Văn Cừ, Quận 5, TP.HCM|true|thinh.vu@email.com
+CUSTOMER|CU006|Đinh Mai Phương|0912000006|FEMALE|092091001006|1991-12-03|33 Hòa Bình, Ninh Kiều, Cần Thơ|true|phuong.dinh@email.com
+CUSTOMER|CU007|John Smith|0912000007|MALE|B1234567|1980-04-11|221 Baker Street, London, UK|false|john.smith@email.com
+CUSTOMER|CU008|Nguyễn Thị Hồng|0912000008|FEMALE|079097001008|1997-09-27|19 Lê Văn Sỹ, Quận 3, TP.HCM|true|hong.nguyen@email.com
+CUSTOMER|CU009|Trịnh Văn Long|0912000009|MALE|079086001009|1986-03-05|67 Cộng Hòa, Tân Bình, TP.HCM|true|long.trinh@email.com
+CUSTOMER|CU010|Lý Thanh Tâm|0912000010|FEMALE|079090001010|1990-07-19|5 Phạm Ngọc Thạch, Quận 3, TP.HCM|false|tam.ly@email.com
+CUSTOMER|CU011|dvgd|0214563879|MALE|55555555|1000-02-15|dvsd|true|dvdsv@gmail.com

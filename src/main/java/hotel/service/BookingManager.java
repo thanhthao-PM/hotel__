@@ -38,10 +38,10 @@ import java.util.Set;
  */
 public class BookingManager implements IFileHandler {
     public static final String DATA_DIR = "src/main/java/hotel/file";
-    private static final String BOOKINGS_FILE = "bookings.txt";
-    private static final String REQUESTS_FILE = "booking_requests.txt";
-    private static final String DETAILS_FILE = "booking_details.txt";
-    private static final String DEPOSITS_FILE = "deposits.txt";
+    private static final String BOOKINGS_FILE = "src/main/java/hotel/file/bookings.txt";
+    private static final String REQUESTS_FILE = "src/main/java/hotel/file/booking_requests.txt";
+    private static final String DETAILS_FILE = "src/main/java/hotel/file/booking_details.txt";
+    private static final String DEPOSITS_FILE = "src/main/java/hotel/file/deposits.txt";
     private static final DateTimeFormatter FILE_DATE_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 

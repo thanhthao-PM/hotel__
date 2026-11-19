@@ -750,7 +750,7 @@ public class ConsoleMenu {
         while (true) {
             printTitle("KHÁCH HÀNG");
             printMenu("1. Danh sách", "2. Tìm kiếm", "3. Thêm khách hàng", "4. Sửa khách hàng",
-                    isEmployeeRole() ? null : "5. Xóa (ngưng hoạt động)", "6. Thành viên đoàn");
+                    isEmployeeRole() ? null : "5. Xóa khách hàng", "6. Thành viên đoàn");
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -807,7 +807,7 @@ public class ConsoleMenu {
         while (true) {
             printTitle("THÀNH VIÊN ĐOÀN");
             printMenu("1. Danh sách thành viên theo người đại diện", "2. Thêm thành viên", "3. Sửa thành viên",
-                    canEdit() ? "4. Xóa (ngưng hoạt động)" : null);
+                    canEdit() ? "4. Xóa thành viên" : null);
             item("0. Quay lại");
 
             int choice = readChoice();
@@ -896,9 +896,12 @@ public class ConsoleMenu {
             System.out.println("Không tìm thấy thành viên đoàn.");
             return;
         }
-        if (!confirm("Ngưng hoạt động thành viên " + id + "?")) return;
-        customerManager.remove(id);
-        System.out.println("Đã ngưng hoạt động.");
+        if (!confirm("Xóa thành viên " + id + "?")) return;
+        if (customerManager.remove(id)) {
+            System.out.println("Đã xóa thành viên.");
+        } else {
+            System.out.println("Không tìm thấy thành viên đoàn.");
+        }
     }
 
     private boolean editCommonField(Person person, int choice) {
@@ -1036,9 +1039,9 @@ public class ConsoleMenu {
 
     private void removeCustomer() {
         String id = readNonEmpty("Mã khách hàng: ").toUpperCase();
-        if (!confirm("Ngưng hoạt động khách " + id + "?")) return;
+        if (!confirm("Xóa khách hàng " + id + "?")) return;
         if (customerManager.remove(id)) {
-            System.out.println("Đã ngưng hoạt động.");
+            System.out.println("Đã xóa khách hàng.");
         } else {
             System.out.println("Không tìm thấy khách hàng.");
         }
@@ -1256,7 +1259,7 @@ public class ConsoleMenu {
     }
 
     private void searchRooms() {
-        String keyword = readNonEmpty("Nhập mã hoặc số phòng cần tìm").toUpperCase();
+        String keyword = readNonEmpty("Nhập mã hoặc số phòng cần tìm: ").toUpperCase();
         Room room = roomManager.findById(keyword);
         if (room == null) room = roomManager.findByRoomNumber(keyword);
         if (room == null) System.out.println("Không tìm thấy phòng.");
@@ -1268,8 +1271,8 @@ public class ConsoleMenu {
     }
 
     private void changeRoomStatus() {
-        String id = readNonEmpty("Mã phòng").toUpperCase();
-        String value = readNonEmpty("Trạng thái mới (AVAILABLE, BOOKED, OCCUPIED, CLEANING, MAINTENANCE)").toUpperCase();
+        String id = readNonEmpty("Nhập mã phòng: ").toUpperCase();
+        String value = readNonEmpty("Trạng thái mới (AVAILABLE, BOOKED, OCCUPIED, CLEANING, MAINTENANCE): ").toUpperCase();
         try {
             if (roomManager.changeRoomStatus(id, RoomStatus.valueOf(value))) {
                 System.out.println("Đổi trạng thái thành công.");
@@ -1280,20 +1283,20 @@ public class ConsoleMenu {
     }
 
     private void addRoom() {
-        String type = readNonEmpty("Loại phòng (STANDARD/VIP)").toUpperCase();
-        String number = readNonEmpty("Số phòng");
-        int floor = readPositiveInt("Tầng");
-        int capacity = readPositiveInt("Sức chứa");
-        double price = readPositiveDouble("Giá một đêm");
+        String type = readNonEmpty("Loại phòng (STANDARD/VIP): ").toUpperCase();
+        String number = readNonEmpty("Số phòng: ");
+        int floor = readPositiveInt("Tầng: ");
+        int capacity = readPositiveInt("Sức chứa: ");
+        double price = readPositiveDouble("Giá một đêm: ");
         try {
             Room room;
             if ("VIP".equals(type)) {
                 room = new VipRoom(Room.generateId(), number, floor, capacity, price,
-                        RoomStatus.AVAILABLE, true, readPositiveDouble("Tỷ lệ phụ thu"),
-                        readNonEmpty("Tiện nghi"), readNonEmpty("Hướng nhìn"));
+                        RoomStatus.AVAILABLE, true, readPositiveDouble("Tỷ lệ phụ thu: "),
+                        readNonEmpty("Tiện nghi: "), readNonEmpty("Hướng nhìn: "));
             } else if ("STANDARD".equals(type)) {
                 room = new StandardRoom(Room.generateId(), number, floor, capacity, price,
-                        RoomStatus.AVAILABLE, true, readNonEmpty("Loại giường"), readPositiveInt("Số giường"));
+                        RoomStatus.AVAILABLE, true, readNonEmpty("Loại giường: "), readPositiveInt("Số giường: "));
             } else {
                 System.out.println("Loại phòng không hợp lệ.");
                 return;
@@ -1305,32 +1308,32 @@ public class ConsoleMenu {
     }
 
     private void editRoom() {
-        String id = readNonEmpty("Mã phòng").toUpperCase();
+        String id = readNonEmpty("Nhập mã phòng: ").toUpperCase();
         Room room = roomManager.findById(id);
         if (room == null) {
             System.out.println("Không tìm thấy phòng.");
             return;
         }
-        room.setRoomNumber(readNonEmpty("Số phòng mới"));
-        room.setFloor(readPositiveInt("Tầng mới"));
-        room.setCapacity(readPositiveInt("Sức chứa mới"));
-        room.setBasePrice(readPositiveDouble("Giá mới"));
+        room.setRoomNumber(readNonEmpty("Số phòng mới: "));
+        room.setFloor(readPositiveInt("Tầng mới: "));
+        room.setCapacity(readPositiveInt("Sức chứa mới: "));
+        room.setBasePrice(readPositiveDouble("Giá mới: "));
         System.out.println(roomManager.update(room) ? "Cập nhật phòng thành công." : "Không thể cập nhật phòng.");
     }
 
     private void removeRoom() {
-        String id = readNonEmpty("Mã phòng").toUpperCase();
+        String id = readNonEmpty("Nhập mã phòng: ").toUpperCase();
         System.out.println(roomManager.delete(id) ? "Đã ngưng sử dụng phòng." : "Không thể ngưng sử dụng phòng.");
     }
 
     private void changeRoomPrice() {
-        String id = readNonEmpty("Mã phòng").toUpperCase();
-        double price = readPositiveDouble("Giá mới");
+        String id = readNonEmpty("Nhập mã phòng: ").toUpperCase();
+        double price = readPositiveDouble("Giá mới: ");
         System.out.println(roomManager.changePrice(id, price) ? "Đổi giá thành công." : "Không thể đổi giá.");
     }
 
     private void searchServices() {
-        String keyword = readNonEmpty("Từ khóa tên dịch vụ");
+        String keyword = readNonEmpty("Từ khóa tên dịch vụ: ");
         ArrayList<HotelService> result = serviceManager.findByName(keyword);
         if (result.isEmpty()) System.out.println("Không tìm thấy dịch vụ.");
         else for (HotelService service : result) System.out.println(service.getServiceInfo());
@@ -1343,23 +1346,23 @@ public class ConsoleMenu {
     }
 
     private void addService() {
-        String type = readNonEmpty("Loại dịch vụ (FOOD/LAUNDRY/SPA)").toUpperCase();
+        String type = readNonEmpty("Loại dịch vụ (FOOD/LAUNDRY/SPA): ").toUpperCase();
         String id = HotelService.generateId();
-        String name = readNonEmpty("Tên dịch vụ");
-        double price = readPositiveDouble("Đơn giá");
-        String unit = readNonEmpty("Đơn vị tính");
-        String description = readNonEmpty("Mô tả");
+        String name = readNonEmpty("Tên dịch vụ: ");
+        double price = readPositiveDouble("Đơn giá: ");
+        String unit = readNonEmpty("Đơn vị tính: ");
+        String description = readNonEmpty("Mô tả: ");
         try {
             HotelService service;
             if ("FOOD".equals(type)) {
                 service = new FoodService(id, name, price, unit, description, true,
-                        readNonEmpty("Nhóm món"), readPositiveInt("Thời gian chuẩn bị (phút)"));
+                        readNonEmpty("Nhóm món: "), readPositiveInt("Thời gian chuẩn bị (phút): "));
             } else if ("LAUNDRY".equals(type)) {
                 service = new LaundryService(id, name, price, unit, description, true,
-                        readNonEmpty("Cách tính (PER_KG/PER_ITEM)").toUpperCase(), readPositiveInt("Thời gian trả (giờ)"));
+                        readNonEmpty("Cách tính (PER_KG/PER_ITEM): ").toUpperCase(), readPositiveInt("Thời gian trả (giờ): "));
             } else if ("SPA".equals(type)) {
                 service = new SpaService(id, name, price, unit, description, true,
-                        readNonEmpty("Loại liệu trình"), readPositiveInt("Thời lượng (phút)"));
+                        readNonEmpty("Loại liệu trình: "), readPositiveInt("Thời lượng (phút): "));
             } else {
                 System.out.println("Loại dịch vụ không hợp lệ.");
                 return;
@@ -1371,47 +1374,47 @@ public class ConsoleMenu {
     }
 
     private void editService() {
-        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        String id = readNonEmpty("Nhập mã dịch vụ: ").toUpperCase();
         HotelService service = serviceManager.findById(id);
         if (service == null) {
             System.out.println("Không tìm thấy dịch vụ.");
             return;
         }
-        service.setName(readNonEmpty("Tên mới"));
-        service.setUnit(readNonEmpty("Đơn vị tính mới"));
-        service.setDescription(readNonEmpty("Mô tả mới"));
-        service.setUnitPrice(readPositiveDouble("Đơn giá mới"));
+        service.setName(readNonEmpty("Tên mới: "));
+        service.setUnit(readNonEmpty("Đơn vị tính mới: "));
+        service.setDescription(readNonEmpty("Mô tả mới: "));
+        service.setUnitPrice(readPositiveDouble("Đơn giá mới: "));
         System.out.println(serviceManager.update(service) ? "Cập nhật dịch vụ thành công." : "Không thể cập nhật.");
     }
 
     private void changeServicePrice() {
-        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
-        double price = readPositiveDouble("Đơn giá mới");
+        String id = readNonEmpty("Nhập mã dịch vụ: ").toUpperCase();
+        double price = readPositiveDouble("Đơn giá mới: ");
         System.out.println(serviceManager.changePrice(id, price) ? "Đổi đơn giá thành công." : "Không thể đổi đơn giá.");
     }
 
     private void deactivateService() {
-        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        String id = readNonEmpty("Nhập mã dịch vụ: ").toUpperCase();
         System.out.println(serviceManager.deactivateService(id) ? "Đã ngưng cung cấp." : "Không thể ngưng cung cấp.");
     }
 
     private void activateService() {
-        String id = readNonEmpty("Mã dịch vụ").toUpperCase();
+        String id = readNonEmpty("Nhập mã dịch vụ: ").toUpperCase();
         System.out.println(serviceManager.activateService(id) ? "Đã cung cấp lại." : "Không thể cung cấp lại.");
     }
 
     private void reportMaintenance() {
-        String roomId = readNonEmpty("Mã phòng").toUpperCase();
-        LocalDate start = readDate("Ngày bắt đầu (dd/MM/yyyy)");
-        LocalDate end = readDate("Ngày kết thúc (dd/MM/yyyy)");
-        String reason = readNonEmpty("Lý do bảo trì");
+        String roomId = readNonEmpty("Nhập mã phòng: ").toUpperCase();
+        LocalDate start = readDate("Ngày bắt đầu (dd/MM/yyyy): ");
+        LocalDate end = readDate("Ngày kết thúc (dd/MM/yyyy): ");
+        String reason = readNonEmpty("Lý do bảo trì: ");
         String reportedBy = currentUser == null ? "NhanVien" : currentUser.getUsername();
         System.out.println(roomManager.createMaintenance(roomId, start, end, reason, reportedBy)
                 ? "Đã báo bảo trì." : "Không thể báo bảo trì.");
     }
 
     private void closeMaintenance() {
-        String id = readNonEmpty("Mã bản ghi bảo trì").toUpperCase();
+        String id = readNonEmpty("Mã bản ghi bảo trì: ").toUpperCase();
         System.out.println(roomManager.closeMaintenance(id) ? "Đã đóng bản ghi bảo trì." : "Không thể đóng bản ghi.");
     }
 
@@ -2348,37 +2351,39 @@ public class ConsoleMenu {
     private void createInvoice() {
         printTitle("LẬP HÓA ĐƠN MỚI");
         String stayId = readNonEmpty("Nhập mã lưu trú (VD ST011): ").toUpperCase();
-        double deposit = readNonNegativeDouble("Nhập tiền cọc đã áp dụng: ");
-
         try {
-            hotel.model.Invoice inv = new hotel.model.Invoice(stayId, getCurrentStaffId(), deposit);
-
-            while (confirm("Thêm dòng chi tiết (tiền phòng / dịch vụ) vào hóa đơn?")) {
-                item("Loại dòng: 1. Tiền phòng (ROOM) | 2. Dịch vụ (SERVICE)");
-                int typeChoice = readChoice();
-                if (typeChoice == 1) {
-                    String roomId = readNonEmpty("Mã phòng (VD RO101): ").toUpperCase();
-                    String desc = readNonEmpty("Mô tả (VD Tiền phòng RO101 - 2 đêm): ");
-                    double qty = readNonNegativeDouble("Số đêm: ");
-                    double price = readNonNegativeDouble("Đơn giá/đêm: ");
-                    inv.addDetail(new hotel.model.InvoiceDetail(
-                        hotel.model.InvoiceDetail.generateId(), inv.getInvoiceId(),
-                        hotel.model.Invoice.LineType.ROOM, desc, roomId, "", "", qty, price));
-                } else if (typeChoice == 2) {
-                    String svcId = readNonEmpty("Mã dịch vụ (VD SV001): ").toUpperCase();
-                    String usageId = readNonEmpty("Mã lượt dùng (VD SU015): ").toUpperCase();
-                    String desc = readNonEmpty("Mô tả dịch vụ: ");
-                    double qty = readNonNegativeDouble("Số lượng: ");
-                    double price = readNonNegativeDouble("Đơn giá: ");
-                    inv.addDetail(new hotel.model.InvoiceDetail(
-                        hotel.model.InvoiceDetail.generateId(), inv.getInvoiceId(),
-                        hotel.model.Invoice.LineType.SERVICE, desc, "", svcId, usageId, qty, price));
-                } else {
-                    System.out.println("Lựa chọn không hợp lệ.");
-                }
+            if (stayManager == null) {
+                throw new IllegalStateException("Chưa khởi tạo quản lý lưu trú.");
+            }
+            StayRecord stay = stayManager.findById(stayId);
+            if (stay == null) {
+                throw new IllegalArgumentException("Không tìm thấy lượt lưu trú " + stayId + ".");
+            }
+            if (stay.getStatus() != hotel.model.enums.StayStatus.CHECKED_OUT) {
+                throw new IllegalStateException("Chỉ lập hóa đơn cho lượt ở đã trả phòng.");
+            }
+            hotel.model.Invoice existing = invoiceManager.findByStayId(stayId);
+            if (existing != null) {
+                System.out.println("Lượt ở đã có hóa đơn " + existing.getInvoiceId() + ".");
+                existing.printReceipt();
+                return;
             }
 
-            invoiceManager.addInvoice(inv);
+            BookingDetail bookingDetail = null;
+            for (BookingDetail detail : bookingManager.getBookingDetails(stay.getBookingId())) {
+                if (detail.getBookingDetailId().equals(stay.getBookingDetailId())) {
+                    bookingDetail = detail;
+                    break;
+                }
+            }
+            if (bookingDetail == null) {
+                throw new IllegalStateException("Không tìm thấy chi tiết đặt phòng "
+                        + stay.getBookingDetailId() + " để tính tiền phòng.");
+            }
+
+            hotel.model.Invoice inv = invoiceManager.createInvoiceForStay(
+                    stay, bookingDetail.getBookingUnitPrice(), bookingDetail.getDepositShare(),
+                    null, getCurrentStaffId());
             System.out.println("=> Lập hóa đơn thành công! Mã hóa đơn: " + inv.getInvoiceId());
             inv.printReceipt();
         } catch (RuntimeException e) {

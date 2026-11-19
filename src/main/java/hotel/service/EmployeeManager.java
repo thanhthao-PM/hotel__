@@ -15,7 +15,6 @@ import java.nio.file.Paths;
 
 public class EmployeeManager implements IManager<Employee>, IFileHandler{
 
-    private static final String FILE_PATH = "file/employee.txt";
     private static final int INITIAL_CAPACITY = 10;
 
     private Employee[] items;
@@ -44,7 +43,7 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         return true;
     }
 
-        @Override public boolean update(Employee e) {
+    @Override public boolean update(Employee e) {
         // Kiểm tra xem nhân viên có rỗng không
         if(e == null) return false;
         // Tìm nhân viên và update
@@ -129,13 +128,12 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         return exact;
     }
 
-
     public int getCount() {return count;}
 
     public Employee getAt(int index) {
         CheckingExpression.checkValidArrayIndex(index, count);;
         return items[index];
-    } 
+    }
 
     public void sortByName() {
         for (int i = 0; i < count - 1; i++) {
@@ -168,47 +166,57 @@ public class EmployeeManager implements IManager<Employee>, IFileHandler{
         }
     }
 
-    @Override public void readFile() {
-        Path path = Paths.get(FILE_PATH);
+    @Override
+    public void readFile() {
+        Path path = Paths.get("src/main/java/hotel/file/employees.txt");
         if (!Files.exists(path)) {
-            return;     // lần chạy đầu chưa có file, đây là chuyện bình thường, không phải lỗi
+            Path legacyPath = Paths.get("src/main/java/hotel/file/employees.txt");
+            if (Files.exists(legacyPath)) {
+                path = legacyPath;
+            } else {
+                return;
+            }
         }
 
-        items = new Employee[INITIAL_CAPACITY];      // bắt đầu từ mảng trống, tránh nạp trùng
+        items = new Employee[INITIAL_CAPACITY];
         count = 0;
 
         try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             String line;
             int lineNumber = 0;
-            while ((line = reader.readLine()) != null) {   // hết file thì readLine trả null
+
+            while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                if (line.trim().isEmpty()) {
-                    continue;                              // bỏ qua dòng trống
+
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue;
                 }
+
                 try {
                     Employee e = Employee.fromFileString(line);
+
                     if (!add(e)) {
-                        System.out.println("Dòng " + lineNumber + ": trùng mã hoặc CCCD, bỏ qua");
+                        System.out.println("Dòng " + lineNumber + ": trùng mã, CCCD hoặc SĐT, bỏ qua");
                     }
+
                 } catch (RuntimeException ex) {
-                    // Dòng hỏng: báo lỗi rồi đi tiếp dòng sau
                     System.out.println("Dòng " + lineNumber + " bị lỗi, bỏ qua: " + ex.getMessage());
                 }
             }
+
         } catch (IOException ex) {
-            System.out.println("Không đọc được file " + FILE_PATH + ": " + ex.getMessage());
+            System.out.println("Không đọc được file employee.txt: " + ex.getMessage());
         }
     }
-
     @Override public void writeFile() {
         String[] lines = new String[count];
         for (int i = 0; i < count; i++) {
             lines[i] = items[i].toFileString();
         }
         try {
-            FileUtil.writeAllLines(FILE_PATH, lines, count);
+            FileUtil.writeAllLines("src/main/java/hotel/file/employees.txt", lines, count);
         } catch (IOException ex) {
-            System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
+            System.out.println("Không ghi được file employees.txt: " + ex.getMessage());
         }
     }
 }

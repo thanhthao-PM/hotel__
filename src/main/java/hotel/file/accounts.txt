@@ -1,21 +1,4 @@
-```text
-# ============================================================
-# FILE: accounts.txt - TAI KHOAN DANG NHAP (class Account)
-# ============================================================
-# Quy uoc: dong bat dau bang # la ghi chu
-# Dau | dung de ngan cach cac truong
-# Username = employeeId (ma nhan vien dung de dang nhap)
-# Mat khau: moi tai khoan co mot mat khau 8 chu so rieng
-# Ngay: yyyy-MM-dd
-#
-# Cot: username|passwordHash|role|employeeId|locked|failedAttempts|lastLogin|mustChangePassword
-#   role: ADMIN, MANAGER, EMPLOYEE
-#   employeeId: ma EM... trong employees.txt
-#   passwordHash: chuoi SHA-256 cua mat khau
-#   locked=true: tai khoan dang bi khoa
-# ============================================================
-
-EM001|ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1|ADMIN|EM001|false|0|2026-11-12|false
+EM001|07480fb9e85b9396af06f006cf1c95024af2531c65fb505cfbd0add1e2f31573|ADMIN|EM001|false|0|2026-11-19|false
 EM002|33a7d3da476a32ac237b3f603a1be62fad00299e0d4b5a8db8d913104edec629|MANAGER|EM002|false|0|2026-11-12|false
 EM003|afb47e00531153e93808589e43d02c11f6398c5bc877f7924cebca8211c8dd18|EMPLOYEE|EM003|false|0|2026-11-12|false
 EM004|b3c4b40750a97212e8981e4ac494d1ec77053f1eaf4e0934c276b74fc4f87c48|EMPLOYEE|EM004|false|0|2026-11-11|false

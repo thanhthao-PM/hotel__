@@ -4,14 +4,10 @@ import hotel.model.Booking;
 import hotel.model.BookingDetail;
 import hotel.model.BookingRequest;
 import hotel.model.CheckOutReceipt;
-import hotel.model.ExtraCharge;
 import hotel.model.GuestMember;
 import hotel.model.HotelService;
-import hotel.model.Invoice;
-import hotel.model.InvoiceDetail;
 import hotel.model.Person;
 import hotel.model.Room;
-import hotel.model.ServiceUsage;
 import hotel.model.StayRecord;
 import hotel.model.enums.BookingStatus;
 import hotel.model.enums.RequestStatus;
@@ -380,31 +376,8 @@ public final class StayLinks {
             if (line == null) {
                 throw new IllegalStateException("Không tìm thấy BookingDetail " + stay.getBookingDetailId());
             }
-            Invoice inv = new Invoice(stay.getStayId(), employeeId, line.depositShare);
-            String id = inv.getInvoiceId();
-            int n = 0;
-
-            long nights = stay.calculateNights();
-            inv.addDetail(new InvoiceDetail(id + "-D" + (++n), id, Invoice.LineType.ROOM,
-                    "Phòng " + stay.getRoomId() + ", " + nights + " đêm",
-                    stay.getRoomId(), null, null, nights, line.unitPrice));
-
-            for (ServiceUsage u : stay.getUsages()) {
-                // InvoiceDetail bắt đơn giá > 0, nên dòng đã hủy hoặc miễn phí không đưa vào hóa đơn
-                if (u.isCancelled() || u.getUnitPriceAtUse() <= 0) continue;
-                inv.addDetail(new InvoiceDetail(id + "-D" + (++n), id, Invoice.LineType.SERVICE,
-                        "Dịch vụ " + u.getServiceId(), null, u.getServiceId(), u.getUsageId(),
-                        u.getQuantity(), u.getUnitPriceAtUse()));
-            }
-
-            if (receipt != null && receipt.getLateHours() > 0) {
-                int h = receipt.getLateHours();
-                inv.addExtraCharge(new ExtraCharge(id + "-EC1", id, "Trả phòng muộn " + h + " giờ",
-                        h * LATE_FEE_PER_HOUR, employeeId));
-            }
-
-            invoices.addInvoice(inv);
-            return id;
+            return invoices.createInvoiceForStay(
+                    stay, line.unitPrice, line.depositShare, receipt, employeeId).getInvoiceId();
         }
     }
 }

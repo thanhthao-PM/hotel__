@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 
 public class CustomerManager implements IManager<Person>, IFileHandler {
 
-    private static final String FILE_PATH = "file/customer.txt";
     private static final int INITIAL_CAPACITY = 10;
 
     private Person[] items;
@@ -94,9 +93,18 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
 
     @Override
     public boolean remove(String id) {
-        Person p = findById(id);
-        if (p == null) return false;
-        p.deactivate();           // xóa mềm
+        int index = -1;
+        for (int i = 0; i < count; i++) {
+            if (items[i].getId().equals(id)) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) return false;
+        for (int i = index; i < count - 1; i++) {
+            items[i] = items[i + 1];
+        }
+        items[--count] = null;
         return true;
     }
 
@@ -171,7 +179,7 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
         }
         return null;
     }
-    
+
     private static Person[] shrink(Person[] arr, int size) {
         Person[] exact = new Person[size];
         for (int i = 0; i < size; i++) exact[i] = arr[i];
@@ -221,7 +229,7 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
 
     @Override
     public void readFile() {
-        Path path = Paths.get(FILE_PATH);
+        Path path = Paths.get("src/main/java/hotel/file/customers.txt");
         if (!Files.exists(path)) return;
 
         items = new Person[INITIAL_CAPACITY];
@@ -232,7 +240,7 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
             int lineNumber = 0;
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
                 try {
                     Person p = parseLine(line);
                     if (!insert(p, false)) {      // false: không kiểm tra người đại diện lúc nạp
@@ -243,7 +251,7 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
                 }
             }
         } catch (IOException ex) {
-            System.out.println("Không đọc được file " + FILE_PATH + ": " + ex.getMessage());
+            System.out.println("Không đọc được file customers.txt: " + ex.getMessage());
         }
 
         // Nạp xong mới kiểm tra: thành viên nào mất người đại diện thì cảnh báo
@@ -262,7 +270,7 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
     private Person parseLine(String line) {
         if (line.startsWith(Customer.TYPE_TAG + "|")) return Customer.fromFileString(line);
         if (line.startsWith(GuestMember.TYPE_TAG + "|")) return GuestMember.fromFileString(line);
-        throw new IllegalArgumentException("Không nhận ra loại dữ liệu ở đầu dòng");
+        return Customer.fromFileString(line);
     }
 
     @Override
@@ -272,9 +280,9 @@ public class CustomerManager implements IManager<Person>, IFileHandler {
             lines[i] = items[i].toFileString();
         }
         try {
-            FileUtil.writeAllLines(FILE_PATH, lines, count);
+            FileUtil.writeAllLines("src/main/java/hotel/file/customers.txt", lines, count);
         } catch (IOException ex) {
-            System.out.println("Không ghi được file " + FILE_PATH + ": " + ex.getMessage());
+            System.out.println("Không ghi được file customers.txt: " + ex.getMessage());
         }
     }
 }

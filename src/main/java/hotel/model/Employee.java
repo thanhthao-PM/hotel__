@@ -57,35 +57,83 @@ public class Employee extends Person {
     }
 
     public static Employee fromFileString(String fileString) {
-        // dòng file không được null hoặc rỗng
-        CheckingExpression.checkNotNullOrEmpty(fileString, "Dòng dữ liệu Employee không được để trống");
+        CheckingExpression.checkNotNullOrEmpty(
+                fileString, "Dòng dữ liệu Employee không được để trống");
 
         String[] parts = fileString.split("\\|", -1);
-        if (parts.length != 12 || !TYPE_TAG.equals(parts[0])) {
-            throw new IllegalArgumentException("Dữ liệu không hợp lệ để tạo Employee từ fileString.");
+        int offset = 0;
+
+        if (parts.length == 12) {
+            if (!TYPE_TAG.equals(parts[0])) {
+                throw new IllegalArgumentException("Thiếu nhãn EMPLOYEE ở đầu dòng dữ liệu");
+            }
+            offset = 1;
+        } else if (parts.length != 11) {
+            throw new IllegalArgumentException(
+                    "Dữ liệu không hợp lệ để tạo Employee từ fileString.");
         }
 
-        //mã phải đúng dạng NVxxx trước khi cắt chuỗi, tránh StringIndexOutOfBoundsException
-        CheckingExpression.checkNotNullOrEmpty(parts[1], "Mã nhân viên không được để trống");
-        if (!parts[1].startsWith(PREFIX) || parts[1].length() <= PREFIX.length()) {
-            throw new IllegalArgumentException("Mã nhân viên không đúng định dạng " + PREFIX + "xxx: " + parts[1]);
+        String id;
+        String name;
+        String phone;
+        Gender gender;
+        String identityNumber;
+        LocalDate dateOfBirth;
+        String address;
+        boolean active;
+        String position;
+        double salary;
+        LocalDate hireDate;
+
+        if (parts.length - offset == 11) {
+            id = parts[offset];
+            name = parts[offset + 1];
+            phone = parts[offset + 2];
+            gender = Gender.valueOf(parts[offset + 3]);
+            identityNumber = parts[offset + 4];
+            dateOfBirth = LocalDate.parse(parts[offset + 5]);
+
+            // Dữ liệu cũ: id|name|phone|gender|identity|dob|position|salary|hire|address|active
+            // Dữ liệu mới của Employee.toFileString:
+            // EMPLOYEE|id|name|phone|gender|identity|dob|address|active|position|salary|hire
+            if (offset == 1
+                    && (parts[8].equalsIgnoreCase("true") || parts[8].equalsIgnoreCase("false"))) {
+                address = parts[7];
+                active = Boolean.parseBoolean(parts[8]);
+                position = parts[9];
+                salary = Double.parseDouble(parts[10]);
+                hireDate = LocalDate.parse(parts[11]);
+            } else if (offset == 0 && (parts[7].equalsIgnoreCase("true") || parts[7].equalsIgnoreCase("false"))) {
+                address = parts[6];
+                active = Boolean.parseBoolean(parts[7]);
+                position = parts[8];
+                salary = Double.parseDouble(parts[9]);
+                hireDate = LocalDate.parse(parts[10]);
+            } else {
+                position = parts[offset + 6];
+                salary = Double.parseDouble(parts[offset + 7]);
+                hireDate = LocalDate.parse(parts[offset + 8]);
+                address = parts[offset + 9];
+                active = Boolean.parseBoolean(parts[offset + 10]);
+            }
+        } else {
+            throw new IllegalArgumentException(
+                    "Dữ liệu không hợp lệ để tạo Employee từ fileString.");
         }
 
+        CheckingExpression.checkNotNullOrEmpty(id, "Mã nhân viên không được để trống");
+        if (!id.startsWith(PREFIX) || id.length() <= PREFIX.length()) {
+            throw new IllegalArgumentException(
+                    "Mã nhân viên không đúng định dạng " + PREFIX);
+        }
 
         Employee employee = new Employee(
-                parts[1], // id
-                parts[2], // name
-                parts[3], // phone
-                Gender.valueOf(parts[4]), // gender
-                parts[5], // identityNumber
-                LocalDate.parse(parts[6]), // dateOfBirth
-                parts[7], // address
-                Boolean.parseBoolean(parts[8]), // active
-                parts[9], // position
-                Double.parseDouble(parts[10]), // salary
-                LocalDate.parse(parts[11])  // hireDate
-        );
-        Person.syncNextNumber(Integer.parseInt(parts[1].substring(PREFIX.length()))); // Đồng bộ nextNumber với ID từ file
+                id, name, phone, gender, identityNumber, dateOfBirth,
+                address, active, position, salary, hireDate);
+
+        Person.syncNextNumber(
+                Integer.parseInt(id.substring(PREFIX.length())));
+
         return employee;
     }
 
